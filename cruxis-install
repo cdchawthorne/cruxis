@@ -1,0 +1,22 @@
+#!/usr/bin/env zsh
+
+function usage {
+    echo "usage $(basename $0)" 1>&2
+    echo "must be run as root" 1>&2
+}
+
+if [[ $(whoami) != root ]]; then
+    usage
+    exit 1
+fi
+
+base_cruxis_dir=/etc/cruxis
+
+if [[ -e ${base_cruxis_dir} ]]; then
+    echo "ERROR: ${base_cruxis_dir} already exists" 1>&2
+    echo "No changes made. Exiting..." 1>&2
+    exit 1
+fi
+
+mkdir -p ${base_cruxis_dir}/networks.d
+touch ${base_cruxis_dir}/networks

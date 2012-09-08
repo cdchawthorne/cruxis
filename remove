@@ -1,0 +1,38 @@
+#!/usr/bin/env zsh
+
+function usage {
+    echo "usage: $0 network1 network2 ..." 1>&2
+    echo "must be run as root" 1>&2
+    echo "networks must be specified by their numeric identifier, NOT a filepath" 1>&2
+    echo "e.g." 1>&2
+    echo "$0 1 3 4" 1>&2
+}
+
+if [[ $# -eq 0 || $(whoami) != "root" ]]; then
+    usage
+    exit 1
+fi
+
+cruxis_dir=/etc/cruxis
+base_networks_dir=${cruxis_dir}/networks.d
+networks_file=${cruxis_dir}/networks
+
+{
+    if ! flock -n 9; then
+        echo "cruxis: could not acquire networks lock" 1>&2
+        exit 1
+    fi
+    for network in $@; do
+        # The latter condition is to avoid the user doing 'remove-network /' and
+        # having it rm -rf /etc/cruxis/networks.d//
+        if [[ ! -e ${base_networks_dir}/${network} || ! ${network} =~ '[0-9]' ]]; then
+            echo "ERROR: non-existant network: ${network}" 1>&2
+            echo "No networks removed. Now exiting..." 1>&2
+            exit 1
+        fi
+    done
+
+    for network in $@; do
+        rm -rf ${base_networks_dir}/${network}
+    done
+} 9> ${cruxis_dir}/.networks_lock

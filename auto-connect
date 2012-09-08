@@ -1,0 +1,69 @@
+#!/usr/bin/env zsh
+
+function usage {
+    echo "usage: cruxis $(basename $0)" 1>&2
+    echo "must be run as root" 1>&2
+}
+
+function extract_ssid {
+    sed -rn -e 's_^[[:blank:]]*ssid="(.*)"$_\1_p' $1
+}
+
+[[ $(whoami) == root ]] || { usage; exit 1; }
+
+cruxis_dir=/etc/cruxis
+cruxis_bin_dir=$(dirname "$(realpath $0)")
+programming=${cruxis_bin_dir}/..
+networks_file=${cruxis_dir}/networks
+base_networks_dir=${cruxis_dir}/networks.d
+
+scan_error_output="wlan0     Interface doesn't support scanning : Network is down"
+
+ip link set wlan0 up
+scan=$(iwlist wlan0 scan 2>&1)
+num_scans=1
+while [[ ${scan} == ${scan_error_output} ]]; do
+    sleep 0.2
+    if [[ ${num_scans} -gt 10 ]]; then
+        echo "cruxis: interface wlan0 can't be scanned" 1>&2
+        exit 1
+    fi
+    scan=$(iwlist wlan0 scan 2>&1)
+    num_scans=$((${num_scans}+1))
+done
+ssids=$(sed -rne 's_^[[:blank:]]*ESSID:"(.*)"$_\1_p' <<< ${scan})
+ip link set wlan0 down
+
+while builtin read network; do
+    network_dir=${base_networks_dir}/${network}
+    ssid=$(cat ${network_dir}/ssid)
+    ret=
+
+    if fgrep -x ${ssid} <<< ${ssids} > /dev/null; then
+        echo "cruxis: attempting to connect to ${ssid}" 1>&2
+
+        if [[ -e ${network_dir}/wpa_supplicant.conf ]]; then
+            ${cruxis_bin_dir}/cruxis connect -f ${network_dir}/wpa_supplicant.conf &> /dev/null
+        else
+            if [[ -e ${network_dir}/key ]]; then
+                ${cruxis_bin_dir}/cruxis connect -p wep -k ${ssid} < ${network_dir}/key &> /dev/null
+            else
+                ${cruxis_bin_dir}/cruxis connect -p wep ${ssid} &> /dev/null
+            fi
+        fi
+
+        ret=$?
+
+        if [[ ${ret} -eq 0 ]]; then
+            echo "cruxis: successfully connected to network ${ssid}" 1>&2
+            exit 0
+        else
+            echo "cruxis: failed to connect to network ${ssid} with error code ${ret}" 1>&2
+        fi
+    fi
+done < ${networks_file}
+
+echo "cruxis: failed to connect to a known network" 1>&2
+echo ${scan}
+echo "cruxis: connect manually using 'cruxis connect'" 1>&2
+exit 1

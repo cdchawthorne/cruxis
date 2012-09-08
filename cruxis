@@ -1,0 +1,18 @@
+#!/usr/bin/env zsh
+
+function usage {
+    echo "usage: $(basename $0) {add|auto-connect|connect|list|remove} ARGS" 1>&2
+}
+
+cruxis_bin_dir="$(dirname "$(realpath $0)")"
+command=$1
+shift
+
+case ${command} in
+    (add|auto-connect|connect|list|remove)
+        ${cruxis_bin_dir}/${command} $@
+        ;;
+    (*)
+        usage
+        exit 1
+esac

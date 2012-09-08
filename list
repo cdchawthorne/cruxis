@@ -1,0 +1,15 @@
+#!/usr/bin/env zsh
+
+cruxis_dir=/etc/cruxis
+base_networks_dir=${cruxis_dir}/networks.d
+
+{
+    if ! flock -n 9; then
+        echo "cruxis: could not acquire networks lock" 1>&2
+        exit 1
+    fi
+
+    for network in ${base_networks_dir}/*; do
+        echo "$(basename ${network}): $(cat ${network}/ssid)"
+    done
+} 9> ${cruxis_dir}/.networks_lock
