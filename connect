@@ -22,7 +22,9 @@ function quick_connect_wpa {
 
     wpa_supplicant -D wext -i wlan0 -c <(wpa_passphrase $1 <<< ${key}) &> /dev/null &|
     supplicant_pid=$!
+    echo foo
     dhcpcd wlan0 2> /dev/null
+    echo bar
     ret=$?
     [[ ret -eq 0 ]] || kill ${supplicant_pid}
     return ret
