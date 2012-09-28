@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+if [[ $(whoami) != root ]]; then
+    echo "must be run as root" 1>&2
+    exit 1
+fi
+
+erl_dir=/usr/lib/cruxis
+bin_dir=/usr/bin
+cruxis_src_dir="$(dirname "$(realpath "$0")")"
+cruxis_base_dir=/etc/cruxis
+
+if [[ ! -d ${erl_dir} ]]; then
+    mkdir ${erl_dir}
+fi
+
+if [[ ! -d ${base_cruxis_dir} ]]; then
+    mkdir ${base_cruxis_dir}
+fi
+
+if [[ ! -d ${base_cruxis_dir}/networks.d ]]; then
+    mkdir ${base_cruxis_dir}/networks.d
+fi
+
+if [[ ! -f ${base_cruxis_dir}/networks ]]; then
+    touch ${base_cruxis_dir}/networks
+fi
+erlc -o ${erl_dir}/ "${cruxis_src_dir}"/{cruxis_client,cruxis_daemon,shell_calls}.erl 
+cp "${cruxis_src_dir}/cruxis_daemon" /etc/rc.d/
+cp "${cruxis_src_dir}/cruxis" /usr/bin/

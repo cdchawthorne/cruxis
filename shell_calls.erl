@@ -1,7 +1,6 @@
 -module(shell_calls).
-%-export([connect_wep/2, connect_wpa/1, connect_wpa/2, connect_unsecured/1,
-         %connect_known_network/1, auto_connect/0]).
--compile([export_all]).
+-export([connect_wep/2, connect_wpa/1, connect_wpa/2, connect_unsecured/1,
+         connect_known_network/1, auto_connect/0]).
 -import(os, [cmd/1]).
 -import(re, [run/2, replace/4]).
 -import(lists, [filter/2, map/2, sort/1, foldr/3, flatten/1]).
@@ -18,7 +17,7 @@ connect_wep(Ssid, Key) ->
     Return = list_to_integer(os:cmd("dhcpcd wlan0 &> /dev/null; echo -n $?")),
     case Return of
         0 -> ok;
-        _ -> {error, Return}
+        _ -> {failed, {failed_to_connect, Return}}
     end.
 
 connect_wpa(Ssid, Key) ->
@@ -26,13 +25,14 @@ connect_wpa(Ssid, Key) ->
     os:cmd(io_lib:format("iwconfig wlan0 essid '~s'", [Ssid])),
     Supplicant_pid = 
         os:cmd(io_lib:format(
-            "zsh -c \"{ wpa_supplicant -D wext -i wlan0 -c <(wpa_passphrase '~s' <<< '~s') &> /dev/null &| };
-             echo -n $!\"", [Ssid, Key])),
+            "bash -c \"{ wpa_supplicant -D wext -i wlan0 -c <(wpa_passphrase '~s' <<< '~s') &> /dev/null & };
+                       echo -n $!;
+                       disown\"", [Ssid, Key])),
     Return = list_to_integer(os:cmd("dhcpcd wlan0 &> /dev/null; echo -n $?")),
     case Return of
         0 -> ok;
         _ -> os:cmd(io_lib:format("kill ~s", [Supplicant_pid])),
-             {error, Return}
+             {failed, {failed_to_connect, Return}}
     end.
 
 connect_wpa(Conf_file) ->
@@ -48,7 +48,7 @@ connect_wpa(Conf_file) ->
     case Return of
         0 -> ok;
         _ -> os:cmd(io_lib:format("kill ~s", [Supplicant_pid])),
-                       {error, Return}
+             {failed, {failed_to_connect, Return}}
     end.
 
 connect_unsecured(Ssid) ->
@@ -60,7 +60,7 @@ connect_unsecured(Ssid) ->
     Return = list_to_integer(os:cmd("dhcpcd wlan0 &> /dev/null; echo -n $?")),
     case Return of
        0 -> ok;
-       _ -> {error, Return}
+       _ -> {failed, {failed_to_connect, Return}}
     end.
 
 connect_known_network(Id) ->
@@ -74,7 +74,7 @@ auto_connect() ->
     Ssids = scan_networks(),
     Known_networks = get_known_networks(),
     case lists:dropwhile(fun(Network) -> connect_if_visible(Network, Ssids) =/= ok end, Known_networks) of
-        [] -> {error, no_known_networks_present};
+        [] -> {failed, no_known_networks_present};
         _  -> ok
     end.
 
@@ -85,11 +85,12 @@ scan_networks() ->
     Scan_result.
 
 scan_times(N) ->
-    if N =:= 0 -> {error, unable_to_scan};
-       true    -> Scan_output = os:cmd("iwlist wlan0 scan"),
-                  if Scan_output =:= ?SCAN_ERROR_OUTPUT -> scan_times(N-1);
-                     true                               -> filter_scan(Scan_output)
-                  end
+    case N of 
+        0 -> exit({error, unable_to_scan});
+        _ -> case os:cmd("iwlist wlan0 scan") of
+                ?SCAN_ERROR_OUTPUT -> scan_times(N-1);
+                Scan_output        -> filter_scan(Scan_output)
+             end
     end.
 
 filter_scan(Scan_output) ->
@@ -107,8 +108,10 @@ drop_newline(Str) ->
                 end, [], Str).
 
 read_file_string(File) ->
-    {ok, Binary_contents} = file:read_file(File),
-    drop_newline(binary_to_list(Binary_contents)).
+    case file:read_file(File) of
+        {error, Reason}       -> exit({error, {unable_to_read_file, File, Reason}});
+        {ok, Binary_contents} -> drop_newline(binary_to_list(Binary_contents))
+    end.
 
 get_known_networks() ->
     Networks = lists:map(fun list_to_integer/1, string:tokens(read_file_string(?NETWORKS_FILE), "\n")),
@@ -131,15 +134,15 @@ get_network_info(N) ->
                     {read_file_string(io_lib:format("~s/~B/ssid", [?NETWORKS_DIR, N])),
                      unsecured}
             end;
-        _ -> {error, network_not_found}
+        _ -> exit({error, {network_not_found, N}})
     end.
 
 connect_if_visible(Network_info, Ssids) ->
     Ssid = element(1, Network_info),
     case lists:any(fun(X) -> X =:= Ssid end, Ssids) of
-       false -> failed;
+       false -> {failed, network_not_present};
        true  -> case connect_by_network_info(Network_info) of
                     ok -> ok;
-                    _ -> failed
+                    Failed_condition -> Failed_condition
                 end
     end.
