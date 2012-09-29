@@ -8,23 +8,31 @@ fi
 erl_dir=/usr/lib/cruxis
 bin_dir=/usr/bin
 cruxis_src_dir="$(dirname "$(realpath "$0")")"
-cruxis_base_dir=/etc/cruxis
+cruxis_conf_dir=/etc/cruxis
 
 if [[ ! -d ${erl_dir} ]]; then
     mkdir ${erl_dir}
 fi
 
-if [[ ! -d ${base_cruxis_dir} ]]; then
-    mkdir ${base_cruxis_dir}
+if [[ ! -d ${cruxis_conf_dir} ]]; then
+    mkdir ${cruxis_conf_dir}
 fi
 
-if [[ ! -d ${base_cruxis_dir}/networks.d ]]; then
-    mkdir ${base_cruxis_dir}/networks.d
+if [[ ! -d ${cruxis_conf_dir}/networks.d ]]; then
+    mkdir ${cruxis_conf_dir}/networks.d
 fi
 
-if [[ ! -f ${base_cruxis_dir}/networks ]]; then
-    touch ${base_cruxis_dir}/networks
+if [[ ! -f ${cruxis_conf_dir}/networks ]]; then
+    touch ${cruxis_conf_dir}/networks
 fi
+
 erlc -o ${erl_dir}/ "${cruxis_src_dir}"/{cruxis_client,cruxis_daemon,shell_calls}.erl 
-cp "${cruxis_src_dir}/cruxis_daemon" /etc/rc.d/
+cp "${cruxis_src_dir}/cruxis-daemon" /etc/rc.d/
 cp "${cruxis_src_dir}/cruxis" /usr/bin/
+
+if [[ ! -r ${cruxis_conf_dir}/cookie ]]; then
+    export HOME=${cruxis_conf_dir}
+    erl -sname cookie_monster -noshell -run init stop
+    mv ${cruxis_conf_dir}/.erlang.cookie ${cruxis_conf_dir}/cookie
+    chmod +r ${cruxis_conf_dir}/cookie
+fi

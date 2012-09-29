@@ -8,15 +8,19 @@ function usage {
 
 name=cruxis
 erl_dir=/usr/lib/cruxis
+cruxis_conf_dir=/etc/cruxis
 daemon=cruxis_daemon
 ARGS=
 
+# erlang gets mad if you run it with $HOME empty
+export HOME=/root
+
 [[ -r "/etc/conf.d/${daemon}" ]] && . "/etc/conf.d/${daemon}"
 
-PID="$(pgrep -f "-pa ${erl_dir} -noshell -run cruxis_daemon start_server$")"
+PID="$(pgrep -f -- "-pa ${erl_dir} -noshell -run cruxis_daemon start_server$")"
 function spawn-cruxis {
-    erl -sname cruxis_daemon -pa ${erl_dir} -noshell -run cruxis_daemon start_server &> /dev/null < /dev/null &
-    "${daemon_bin}" "$@" &> /dev/null < /dev/null &
+    erl -setcookie "$(cat ${cruxis_conf_dir}/cookie)" -sname cruxis_daemon -pa ${erl_dir} \
+        -noshell -run cruxis_daemon start_server &> /dev/null < /dev/null &
     disown
 }
 
