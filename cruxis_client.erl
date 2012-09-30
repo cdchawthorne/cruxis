@@ -2,10 +2,10 @@
 -export([cruxis_client/0]).
 
 connect_to_daemon() ->
-    net_kernel:connect(cruxis_daemon@localhost).
+    net_kernel:connect('cruxis_daemon@127.0.0.1').
 
 call_daemon(Call) ->
-    gen_server:call({cruxis_daemon, cruxis_daemon@localhost}, Call).
+    gen_server:call({cruxis_daemon, 'cruxis_daemon@127.0.0.1'}, Call).
 
 cruxis_client() ->
     [Command | Args] = init:get_plain_arguments(),

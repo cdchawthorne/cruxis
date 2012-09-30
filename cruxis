@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-function usage {
-    echo "usage: $(basename $0) <command> [<args>]" 1>&2
-    echo "type '$(basename $0) help <command>' for usage on a specific command" 1>&2
-}
-
 erl_dir=/usr/lib/cruxis
 cruxis_conf_dir=/etc/cruxis
 
+# erlang gets mad if run with $HOME empty
+if [[ -z ${HOME} ]]; then
+    export HOME=/root
+fi
+
 erl -noshell -setcookie "$(cat ${cruxis_conf_dir}/cookie)" -pa ${erl_dir} \
-    -sname "cruxis_client_$$" -run cruxis_client cruxis_client -run init stop \
-    -extra "$@"
+    -name "cruxis_client_$$@127.0.0.1" -run cruxis_client cruxis_client \
+    -run init stop -extra "$@"

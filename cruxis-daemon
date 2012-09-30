@@ -19,8 +19,8 @@ export HOME=/root
 
 PID="$(pgrep -f -- "-pa ${erl_dir} -noshell -run cruxis_daemon start_server$")"
 function spawn-cruxis {
-    erl -setcookie "$(cat ${cruxis_conf_dir}/cookie)" -sname cruxis_daemon -pa ${erl_dir} \
-        -noshell -run cruxis_daemon start_server &> /dev/null < /dev/null &
+    erl -setcookie "$(cat ${cruxis_conf_dir}/cookie)" -name cruxis_daemon@127.0.0.1 \
+        -pa ${erl_dir} -noshell -run cruxis_daemon start_server &> /dev/null < /dev/null &
     disown
 }
 
