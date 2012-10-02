@@ -8,13 +8,12 @@ call_daemon(Call) ->
     gen_server:call({cruxis_daemon, 'cruxis_daemon@127.0.0.1'}, Call).
 
 cruxis_client() ->
-    [Command | Args] = init:get_plain_arguments(),
-    case Command of
-        "-h" -> help();
-        "--help" -> help();
-        "help" -> help();
-        "auto_connect" -> auto_connect(Args);
-        "connect" -> connect(Args);
+    case init:get_plain_arguments() of
+        ["-h" | _] -> help();
+        ["--help" | _] -> help();
+        ["help" | _] -> help();
+        ["auto_connect"] -> auto_connect();
+        ["connect" | Args ] -> connect(Args);
         _ -> help()
     end.
 
@@ -26,20 +25,29 @@ help() ->
                 cruxis connect -n NETWORK_NUMBER
                 cruxis help~n", []).
 
-auto_connect([]) ->
+auto_connect() ->
     connect_to_daemon(),
-    call_daemon(auto_connect);
-auto_connect(_) ->
-    help().
+    call_daemon(auto_connect).
+
+drop_newline(Str) ->
+    lists:foldr(fun(Char, Lst) ->
+                    if Char =:= 10 andalso Lst =:= [] -> [];
+                       true                           -> [Char | Lst ]
+                    end
+                end, [], Str).
 
 connect(["-p", "wep", Ssid]) ->
     connect_to_daemon(),
-    io:format("Please enter the network key:~n"),
-    call_daemon({connect, {wep, Ssid, io:get_password()}});
+    %io:format("Please enter the network key:~n"),
+    %Key = io:get_password(),
+    Key = drop_newline(io:get_line("")),
+    call_daemon({connect, {wep, Ssid, Key}});
 connect(["-p", "wpa", Ssid]) ->
     connect_to_daemon(),
-    io:format("Please enter the network key:~n"),
-    call_daemon({connect, {wpa, Ssid, io:get_password()}});
+    %io:format("Please enter the network key:~n"),
+    %Key = io:get_password(),
+    Key = drop_newline(io:get_line("")),
+    call_daemon({connect, {wpa, Ssid, Key}});
 connect(["-p", "unsecured", Ssid]) ->
     connect_to_daemon(),
     call_daemon({connect, {unsecured, Ssid}});

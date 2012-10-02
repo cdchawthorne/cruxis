@@ -15,6 +15,10 @@ ARGS=
 # erlang gets mad if you run it with $HOME empty
 export HOME=/root
 
+if [[ -z ERL_CRASH_DUMP ]]; then
+    export ERL_CRASH_DUMP=/dev/null
+fi
+
 [[ -r "/etc/conf.d/${daemon}" ]] && . "/etc/conf.d/${daemon}"
 
 PID="$(pgrep -f -- "-pa ${erl_dir} -noshell -run cruxis_daemon start_server$")"

@@ -8,6 +8,19 @@ if [[ -z ${HOME} ]]; then
     export HOME=/root
 fi
 
+if [[ -z ERL_CRASH_DUMP ]]; then
+    export ERL_CRASH_DUMP=/dev/null
+fi
+
+# Holy ungodly hacks, Batman!
+# I can't get erlang's io:get_password() to work
+# in a script, so I'm getting the password in the shell script.
+# I'm pretty sure I'm going to hell for this...
+if [[ $1 == connect && $2 == -p && ( $3 == wpa || $3 == wep ) ]]; then
+    read -s -p "Enter network key: " key
+    echo
+fi
+
 erl -noshell -setcookie "$(cat ${cruxis_conf_dir}/cookie)" -pa ${erl_dir} \
     -name "cruxis_client_$$@127.0.0.1" -run cruxis_client cruxis_client \
-    -run init stop -extra "$@"
+    -run init stop -extra "$@" <<< ${key}
