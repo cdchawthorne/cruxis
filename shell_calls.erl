@@ -1,6 +1,8 @@
 -module(shell_calls).
 -export([connect_wep/2, connect_wpa/1, connect_wpa/2, connect_unsecured/1,
-         connect_known_network/1, auto_connect/0]).
+         connect_known_network/1, auto_connect/0, add_wpa_network/1,
+         add_wpa_network/2, add_wep_network/2, add_unsecured_network/1,
+         remove_network/1]).
 -import(os, [cmd/1]).
 -import(re, [run/2, replace/4]).
 -import(lists, [filter/2, map/2, sort/1, foldr/3, flatten/1]).
@@ -145,4 +147,91 @@ connect_if_visible(Network_info, Ssids) ->
                     ok -> ok;
                     Failed_condition -> Failed_condition
                 end
+    end.
+
+get_next_network() ->
+    {ok, Lst} = file:list_dir(?NETWORKS_DIR),
+    Networks = lists:sort(lists:map(fun(X) -> erlang:list_to_integer(X) end, Lst)),
+    least_not_in(Networks,0).
+
+least_not_in([X | Xs],N) ->
+    if X =/= N -> N;
+       true    -> least_not_in(Xs, N+1)
+    end;
+least_not_in([], N) ->
+    N.
+
+make_network(Network_id, Ssid) ->
+    case file:make_dir(io_lib:format("~s/~B", [?NETWORKS_DIR, Network_id])) of
+        ok -> ok;
+        {error, Reason1} -> exit({error, {unable_to_make_directory, Reason1}})
+    end,
+    case file:write_file(io_lib:format("~s/~B/ssid", [?NETWORKS_DIR, Network_id]), Ssid) of
+        ok -> ok;
+        {error, Reason2} -> exit({error, {unable_to_make_ssid_file, Reason2}})
+    end.
+
+new_network(Ssid) ->
+    New_id = get_next_network(),
+    make_network(New_id, Ssid),
+    New_id.
+
+add_wpa_network(Conf_file) ->
+    Ssid = os:cmd(io_lib:format("sed -rne 's/^[[:blank:]]*ssid=(.*)$/\\1/gp' '~s'", [Conf_file])),
+    Network_id = new_network(Ssid),
+    case file:copy(Conf_file, io_lib:format("~s/~B/wpa_supplicant.conf",
+                                            [?NETWORKS_DIR, Network_id])) of
+        {ok, _} -> ok;
+        {error, Reason1} -> exit({error, {unable_to_copy_conf_file, Reason1}})
+    end,
+    case file:change_mode(io_lib:format("~s/~B/wpa_supplicant.conf", [?NETWORKS_DIR, Network_id]), 384) of
+        ok -> ok;
+        {error, Reason2} -> exit({error, {unable_to_change_mode, Reason2}})
+    end.
+
+add_wpa_network(Ssid, Key) ->
+    Network_id = new_network(Ssid),
+    Conf_file_contents = os:cmd(io_lib:format("wpa_passphrase '~s' <<< '~s' 2> /dev/null",
+                                              [Ssid, Key])),
+    case file:write_file(io_lib:format("~s/~B/wpa_supplicant.conf", [?NETWORKS_DIR, Network_id]),
+                         Conf_file_contents) of
+        ok -> ok;
+        {error, Reason1} -> exit({error, {unable_to_make_conf_file, Reason1}})
+    end,
+    case file:change_mode(io_lib:format("~s/~B/wpa_supplicant.conf", [?NETWORKS_DIR, Network_id]), 384) of
+        ok -> ok;
+        {error, Reason2} -> exit({error, {unable_to_change_mode, Reason2}})
+    end.
+
+add_wep_network(Ssid, Key) ->
+    Network_id = new_network(Ssid),
+    case file:write_file(io_lib:format("~s/~B/key", [?NETWORKS_DIR, Network_id]), Key) of
+        ok -> ok;
+        {error, Reason1} -> exit({error, {unable_to_make_key_file, Reason1}})
+    end,
+    case file:change_mode(io_lib:format("~s/~B/key", [?NETWORKS_DIR, Network_id]), 384) of
+        ok -> ok;
+        {error, Reason2} -> exit({error, {unable_to_change_mode, Reason2}})
+    end.
+
+add_unsecured_network(Ssid) ->
+    new_network(Ssid).
+
+remove_network(Network_id) ->
+    lists:map(
+        fun(File) -> 
+            case file:delete(io_lib:format("~s/~B/~s", [?NETWORKS_DIR, Network_id, File])) of
+                ok -> ok;
+                {error, Reason} -> exit({error, {unable_to_delete_network_file, File, Reason}})
+            end
+        end,
+        erlang:element(2,file:list_dir(io_lib:format("~s/~B", [?NETWORKS_DIR, Network_id])))),
+    case file:del_dir(io_lib:format("~s/~B/", [?NETWORKS_DIR, Network_id])) of
+        ok -> ok;
+        {error, Reason} -> exit({error, {unable_to_delete_network, Reason}})
+    end,
+    Return = os:cmd("sed -ire '/^~s$/d' ~s &> /dev/null; echo $?", [Network_id, ?NETWORKS_FILE]),
+    case erlang:list_to_integer(Return) of
+        0 -> ok;
+        N -> exit({error, {unable_to_modify_networks_file, N}})
     end.

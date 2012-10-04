@@ -14,6 +14,8 @@ cruxis_client() ->
         ["help" | _] -> help();
         ["auto_connect"] -> auto_connect();
         ["connect" | Args ] -> connect(Args);
+        ["add" | Args ] -> add_network(Args);
+        ["remove", Network_id] -> remove_network(Network_id);
         _ -> help()
     end.
 
@@ -23,6 +25,9 @@ help() ->
                 cruxis connect -p (wep|wpa|unsecured) SSID
                 cruxis connect -f WPA_CONF_FILE
                 cruxis connect -n NETWORK_NUMBER
+                cruxis add -p (wep|wpa|unsecured) SSID
+                cruxis add -f WPA_CONF_FILE
+                cruxis remove NETWORK_ID
                 cruxis help~n", []).
 
 auto_connect() ->
@@ -59,3 +64,28 @@ connect(["-n", Network_number]) ->
     call_daemon({connect, {by_number, Network_number}});
 connect(_) ->
     help().
+
+add_network(["-p", "wep", Ssid]) ->
+    connect_to_daemon(),
+    %io:format("Please enter the network key:~n"),
+    %Key = io:get_password(),
+    Key = drop_newline(io:get_line("")),
+    call_daemon({add_network, {wep, Ssid, Key}});
+add_network(["-p", "wpa", Ssid]) ->
+    connect_to_daemon(),
+    %io:format("Please enter the network key:~n"),
+    %Key = io:get_password(),
+    Key = drop_newline(io:get_line("")),
+    call_daemon({add_network, {wpa, Ssid, Key}});
+add_network(["-p", "unsecured", Ssid]) ->
+    connect_to_daemon(),
+    call_daemon({add_network, {unsecured, Ssid}});
+add_network(["-f", Wpa_conf_file]) ->
+    connect_to_daemon(),
+    call_daemon({add_network, {wpa_from_file, Wpa_conf_file}});
+add_network(_) ->
+    help().
+
+remove_network(Network_id) ->
+    connect_to_daemon(),
+    call_daemon({remove_network, erlang:list_to_integer(Network_id)}).

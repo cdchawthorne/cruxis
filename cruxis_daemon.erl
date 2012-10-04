@@ -27,7 +27,24 @@ handle_call({connect, {wep, Ssid, Key}}, _, _) ->
     {reply, success, idle};
 handle_call({connect, {unsecured, Ssid}}, _, _) ->
     spawn_monitor(shell_calls, connect_unsecured, [Ssid]),
-    {reply, success, idle}.
+    {reply, success, idle};
+handle_call({add_network, {wpa_from_file, File}}, _, _) ->
+    spawn_monitor(shell_calls, add_wpa_network, [File]),
+    {reply, success, idle};
+handle_call({add_network, {wpa, Ssid, Key}}, _, _) ->
+    spawn_monitor(shell_calls, add_wpa_network, [Ssid, Key]),
+    {reply, success, idle};
+handle_call({add_network, {wep, Ssid, Key}}, _, _) ->
+    spawn_monitor(shell_calls, add_wep_network, [Ssid, Key]),
+    {reply, success, idle};
+handle_call({add_network, {unsecured, Ssid}}, _, _) ->
+    spawn_monitor(shell_calls, add_unsecured_network, [Ssid]),
+    {reply, success, idle};
+handle_call({remove_network, Network_id}, _, _) ->
+    spawn_monitor(shell_calls, remove_network, [Network_id]),
+    {reply, success, idle};
+handle_call(_,_,_) ->
+    {reply, bad_call, idle}.
 
 handle_cast(_, _) ->
     {noreply, idle}.

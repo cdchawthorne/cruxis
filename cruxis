@@ -16,7 +16,7 @@ fi
 # I can't get erlang's io:get_password() to work
 # in a script, so I'm getting the password in the shell script.
 # I'm pretty sure I'm going to hell for this...
-if [[ $1 == connect && $2 == -p && ( $3 == wpa || $3 == wep ) ]]; then
+if [[ ( $1 == connect || $1 == add ) && $2 == -p && ( $3 == wpa || $3 == wep ) ]]; then
     read -s -p "Enter network key: " key
     echo
 fi

@@ -36,3 +36,7 @@ if [[ ! -r ${cruxis_conf_dir}/cookie ]]; then
     mv ${cruxis_conf_dir}/.erlang.cookie ${cruxis_conf_dir}/cookie
     chmod +r ${cruxis_conf_dir}/cookie
 fi
+
+if [[ $(rc.d status cruxis-daemon) == Running ]]; then
+    rc.d restart cruxis-daemon
+fi
