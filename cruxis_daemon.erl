@@ -43,6 +43,12 @@ handle_call({add_network, {unsecured, Ssid}}, _, _) ->
 handle_call({remove_network, Network_id}, _, _) ->
     spawn_monitor(shell_calls, remove_network, [Network_id]),
     {reply, success, idle};
+handle_call({remember_network, Network_id}, _, _) ->
+    spawn_monitor(shell_calls, remember_network, [Network_id]),
+    {reply, success, idle};
+handle_call({forget_network, Network_id}, _, _) ->
+    spawn_monitor(shell_calls, forget_network, [Network_id]),
+    {reply, success, idle};
 handle_call(_,_,_) ->
     {reply, bad_call, idle}.
 

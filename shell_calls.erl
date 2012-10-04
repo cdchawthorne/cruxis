@@ -2,7 +2,7 @@
 -export([connect_wep/2, connect_wpa/1, connect_wpa/2, connect_unsecured/1,
          connect_known_network/1, auto_connect/0, add_wpa_network/1,
          add_wpa_network/2, add_wep_network/2, add_unsecured_network/1,
-         remove_network/1]).
+         remove_network/1, remember_network/1, forget_network/1]).
 -import(os, [cmd/1]).
 -import(re, [run/2, replace/4]).
 -import(lists, [filter/2, map/2, sort/1, foldr/3, flatten/1]).
@@ -230,7 +230,30 @@ remove_network(Network_id) ->
         ok -> ok;
         {error, Reason} -> exit({error, {unable_to_delete_network, Reason}})
     end,
-    Return = os:cmd("sed -ire '/^~s$/d' ~s &> /dev/null; echo $?", [Network_id, ?NETWORKS_FILE]),
+    Return = os:cmd("sed -ire '/^~B$/d' '~s' &> /dev/null; echo -n $?", [Network_id, ?NETWORKS_FILE]),
+    case erlang:list_to_integer(Return) of
+        0 -> ok;
+        N -> exit({error, {unable_to_modify_networks_file, N}})
+    end.
+
+remember_network(Network_id) ->
+    Networks = file:list_dir(?NETWORKS_DIR),
+    case lists:member(erlang:integer_to_list(Network_id), erlang:element(2, Networks)) of
+        true -> ok;
+        false -> exit({error, network_not_found})
+    end,
+    Return = os:cmd(io_lib:format("egrep '~B' '~s'; echo -n $?", [Network_id, ?NETWORKS_FILE])),
+    case erlang:list_to_integer(Return) of
+        0 -> ok;
+        _ -> case file:write_file(?NETWORKS_FILE, io_lib:format("~B~n", [Network_id]), [append]) of
+                 ok -> ok;
+                 {error, Reason} -> exit({error, {unable_to_write_to_networks_file, Reason}})
+             end
+    end.
+
+forget_network(Network_id) ->
+    Return = os:cmd(io_lib:format("sed -ire '/^~B$/d' '~s' &> /dev/null; echo -n $?",
+                                  [Network_id, ?NETWORKS_FILE])),
     case erlang:list_to_integer(Return) of
         0 -> ok;
         N -> exit({error, {unable_to_modify_networks_file, N}})

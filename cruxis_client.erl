@@ -16,6 +16,8 @@ cruxis_client() ->
         ["connect" | Args ] -> connect(Args);
         ["add" | Args ] -> add_network(Args);
         ["remove", Network_id] -> remove_network(Network_id);
+        ["remember", Network_id] -> remember_network(Network_id);
+        ["forget", Network_id] -> forget_network(Network_id);
         _ -> help()
     end.
 
@@ -28,6 +30,8 @@ help() ->
                 cruxis add -p (wep|wpa|unsecured) SSID
                 cruxis add -f WPA_CONF_FILE
                 cruxis remove NETWORK_ID
+                cruxis remember NETWORK_ID
+                cruxis forget NETWORK_ID
                 cruxis help~n", []).
 
 auto_connect() ->
@@ -89,3 +93,11 @@ add_network(_) ->
 remove_network(Network_id) ->
     connect_to_daemon(),
     call_daemon({remove_network, erlang:list_to_integer(Network_id)}).
+
+remember_network(Network_id) ->
+    connect_to_daemon(),
+    call_daemon({remember_network, erlang:list_to_integer(Network_id)}).
+
+forget_network(Network_id) ->
+    connect_to_daemon(),
+    call_daemon({forget_network, erlang:list_to_integer(Network_id)}).
