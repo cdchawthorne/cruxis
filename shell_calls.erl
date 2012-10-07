@@ -2,7 +2,8 @@
 -export([connect_wep/2, connect_wpa/1, connect_wpa/2, connect_unsecured/1,
          connect_known_network/1, auto_connect/0, add_wpa_network/1,
          add_wpa_network/2, add_wep_network/2, add_unsecured_network/1,
-         remove_network/1, remember_network/1, forget_network/1]).
+         remove_network/1, remember_network/1, forget_network/1,
+         list_networks/0]).
 -import(os, [cmd/1]).
 -import(re, [run/2, replace/4]).
 -import(lists, [filter/2, map/2, sort/1, foldr/3, flatten/1]).
@@ -10,7 +11,11 @@
 -define(NETWORKS_FILE, "/etc/cruxis/networks").
 -define(NETWORKS_DIR, "/etc/cruxis/networks.d").
 
+disconnect() ->
+    os:cmd("pkill '(wpa_supplicant|dhcpcd)'").
+
 connect_wep(Ssid, Key) ->
+    disconnect(),
     os:cmd("ip link set wlan0 up"),
     os:cmd(io_lib:format("iwconfig wlan0 essid '~s' key '~s'", [Ssid, Key])),
     os:cmd("ip link set wlan0 down"),
@@ -23,6 +28,7 @@ connect_wep(Ssid, Key) ->
     end.
 
 connect_wpa(Ssid, Key) ->
+    disconnect(),
     os:cmd("ip link set wlan0 up"),
     os:cmd(io_lib:format("iwconfig wlan0 essid '~s'", [Ssid])),
     Supplicant_pid = 
@@ -38,6 +44,7 @@ connect_wpa(Ssid, Key) ->
     end.
 
 connect_wpa(Conf_file) ->
+    disconnect(),
     os:cmd("ip link set wlan0 up"),
     Ssid = os:cmd(io_lib:format("sed -rne 's/^[[:blank:]]*ssid=(.*)$/\\1/gp' '~s'", [Conf_file])),
     os:cmd(io_lib:format("iwconfig wlan0 essid '~s'", [Ssid])),
@@ -54,6 +61,7 @@ connect_wpa(Conf_file) ->
     end.
 
 connect_unsecured(Ssid) ->
+    disconnect(),
     os:cmd("ip link set wlan0 up"),
     os:cmd(io_lib:format("iwconfig wlan0 essid '~s'", [Ssid])),
     os:cmd("ip link set wlan0 down"),
@@ -66,6 +74,7 @@ connect_unsecured(Ssid) ->
     end.
 
 connect_known_network(Id) ->
+    disconnect(),
     connect_by_network_info(get_network_info(Id)).
 
 connect_by_network_info({_, wpa, Conf_file}) -> connect_wpa(Conf_file);
@@ -74,9 +83,9 @@ connect_by_network_info({Ssid, unsecured}) -> connect_unsecured(Ssid).
 
 auto_connect() ->
     Ssids = scan_networks(),
-    Known_networks = get_known_networks(),
-    case lists:dropwhile(fun(Network) -> connect_if_visible(Network, Ssids) =/= ok end, Known_networks) of
-        [] -> {failed, no_known_networks_present};
+    Remembered_networks = get_remembered_networks(),
+    case lists:dropwhile(fun(Network) -> connect_if_visible(Network, Ssids) =/= ok end, Remembered_networks) of
+        [] -> {failed, no_remembered_networks_present};
         _  -> ok
     end.
 
@@ -115,7 +124,7 @@ read_file_string(File) ->
         {ok, Binary_contents} -> drop_newline(binary_to_list(Binary_contents))
     end.
 
-get_known_networks() ->
+get_remembered_networks() ->
     Networks = lists:map(fun list_to_integer/1, string:tokens(read_file_string(?NETWORKS_FILE), "\n")),
     map(fun get_network_info/1, Networks).
 
@@ -230,15 +239,15 @@ remove_network(Network_id) ->
         ok -> ok;
         {error, Reason} -> exit({error, {unable_to_delete_network, Reason}})
     end,
-    Return = os:cmd("sed -ire '/^~B$/d' '~s' &> /dev/null; echo -n $?", [Network_id, ?NETWORKS_FILE]),
+    Return = os:cmd(io_lib:format("sed -i -r -e '/^~B$/d' '~s' &> /dev/null; echo -n $?", [Network_id, ?NETWORKS_FILE])),
     case erlang:list_to_integer(Return) of
         0 -> ok;
         N -> exit({error, {unable_to_modify_networks_file, N}})
     end.
 
 remember_network(Network_id) ->
-    Networks = file:list_dir(?NETWORKS_DIR),
-    case lists:member(erlang:integer_to_list(Network_id), erlang:element(2, Networks)) of
+    {ok, Networks} = file:list_dir(?NETWORKS_DIR),
+    case lists:member(erlang:integer_to_list(Network_id), Networks) of
         true -> ok;
         false -> exit({error, network_not_found})
     end,
@@ -252,9 +261,19 @@ remember_network(Network_id) ->
     end.
 
 forget_network(Network_id) ->
-    Return = os:cmd(io_lib:format("sed -ire '/^~B$/d' '~s' &> /dev/null; echo -n $?",
+    Return = os:cmd(io_lib:format("sed -i -r -e '/^~B$/d' '~s' &> /dev/null; echo -n $?",
                                   [Network_id, ?NETWORKS_FILE])),
     case erlang:list_to_integer(Return) of
         0 -> ok;
         N -> exit({error, {unable_to_modify_networks_file, N}})
     end.
+
+list_networks() ->
+    {ok, Networks} = file:list_dir(?NETWORKS_DIR),
+    Networks_with_info =
+        lists:map(fun(Network) ->
+                      {erlang:list_to_integer(Network),
+                       read_file_string(io_lib:format("~s/~s/ssid", [?NETWORKS_DIR, Network]))}
+            end,
+            Networks),
+    lists:sort(fun({N, _}, {M, _}) -> N =< M end, Networks_with_info).

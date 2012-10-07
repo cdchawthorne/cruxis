@@ -18,6 +18,7 @@ cruxis_client() ->
         ["remove", Network_id] -> remove_network(Network_id);
         ["remember", Network_id] -> remember_network(Network_id);
         ["forget", Network_id] -> forget_network(Network_id);
+        ["list"] -> list_networks();
         _ -> help()
     end.
 
@@ -101,3 +102,8 @@ remember_network(Network_id) ->
 forget_network(Network_id) ->
     connect_to_daemon(),
     call_daemon({forget_network, erlang:list_to_integer(Network_id)}).
+
+list_networks() ->
+    connect_to_daemon(),
+    Res = call_daemon(list_networks),
+    lists:map(fun({Network_id, Ssid}) -> io:format("~B: ~s~n", [Network_id, Ssid]) end, Res).

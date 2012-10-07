@@ -49,6 +49,8 @@ handle_call({remember_network, Network_id}, _, _) ->
 handle_call({forget_network, Network_id}, _, _) ->
     spawn_monitor(shell_calls, forget_network, [Network_id]),
     {reply, success, idle};
+handle_call(list_networks, _, _) ->
+    {reply, shell_calls:list_networks(), idle};
 handle_call(_,_,_) ->
     {reply, bad_call, idle}.
 

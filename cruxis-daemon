@@ -6,20 +6,19 @@ function usage {
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-name=cruxis
+name=cruxis-daemon
 erl_dir=/usr/lib/cruxis
 cruxis_conf_dir=/etc/cruxis
-daemon=cruxis_daemon
 ARGS=
 
 # erlang gets mad if you run it with $HOME empty
 export HOME=/root
 
-if [[ -z ERL_CRASH_DUMP ]]; then
+if [[ -z ${ERL_CRASH_DUMP} ]]; then
     export ERL_CRASH_DUMP=/dev/null
 fi
 
-[[ -r "/etc/conf.d/${daemon}" ]] && . "/etc/conf.d/${daemon}"
+[[ -r "/etc/conf.d/${name}" ]] && . "/etc/conf.d/${name}"
 
 PID="$(pgrep -f -- "-pa ${erl_dir} -noshell -run cruxis_daemon start_server$")"
 function spawn-cruxis {
@@ -47,6 +46,7 @@ case $1 in
         if [[ -n "${PID}" ]]; then
             kill "${PID}" &> /dev/null
             if [[ "$?" -eq 0 ]]; then
+                rm_daemon "${name}"
                 stat_done
             else
                 stat_fail
