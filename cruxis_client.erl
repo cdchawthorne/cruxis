@@ -86,8 +86,9 @@ add_network(["-p", "unsecured", Ssid]) ->
     connect_to_daemon(),
     call_daemon({add_network, {unsecured, Ssid}});
 add_network(["-f", Wpa_conf_file]) ->
+    {ok, Cwd} = file:get_cwd(),
     connect_to_daemon(),
-    call_daemon({add_network, {wpa_from_file, Wpa_conf_file}});
+    call_daemon({add_network, {wpa_from_file, Cwd ++ "/" ++ Wpa_conf_file}});
 add_network(_) ->
     help().
 

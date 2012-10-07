@@ -186,7 +186,7 @@ new_network(Ssid) ->
     New_id.
 
 add_wpa_network(Conf_file) ->
-    Ssid = os:cmd(io_lib:format("sed -rne 's/^[[:blank:]]*ssid=(.*)$/\\1/gp' '~s'", [Conf_file])),
+    Ssid = os:cmd(io_lib:format("sed -rne 's/^[[:blank:]]*ssid=\"(.*)\"$/\\1/gp' '~s'", [Conf_file])),
     Network_id = new_network(Ssid),
     case file:copy(Conf_file, io_lib:format("~s/~B/wpa_supplicant.conf",
                                             [?NETWORKS_DIR, Network_id])) of
