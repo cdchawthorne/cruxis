@@ -20,10 +20,10 @@ fi
 
 [[ -r "/etc/conf.d/${name}" ]] && . "/etc/conf.d/${name}"
 
-PID="$(pgrep -f -- "-pa ${erl_dir} -noshell -run cruxis_daemon start_server$")"
+PID="$(pgrep -f -- "-pa ${erl_dir} -noshell -run cruxis_daemon start_daemon$")"
 function spawn-cruxis {
     erl -setcookie "$(cat ${cruxis_conf_dir}/cookie)" -name cruxis_daemon@127.0.0.1 \
-        -pa ${erl_dir} -noshell -run cruxis_daemon start_server &> /dev/null < /dev/null &
+        -pa ${erl_dir} -noshell -run cruxis_daemon start_daemon &> /dev/null < /dev/null &
     disown
 }
 

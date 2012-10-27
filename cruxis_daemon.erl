@@ -1,67 +1,62 @@
 -module(cruxis_daemon).
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-         code_change/3, start_server/0]).
--behaviour(gen_server).
+-export([start_daemon/0]).
 -import(shell_calls).
+-define(DAEMON_HANDLE, {cruxis_daemon, 'cruxis_daemon@127.0.0.1'}).
 
-start_server() ->
-    gen_server:start({local, cruxis_daemon}, ?MODULE, [], []).
+start_daemon() ->
+    register(cruxis_daemon, self()),
+    State = get_initial_state(),
+    daemon(State).
 
-init(_) ->
-    {ok, idle}.
+get_initial_state() ->
+    state_not_implemented.
 
-handle_call(auto_connect, _, _) ->
-    spawn_monitor(shell_calls, auto_connect, []),
-    {reply, success, idle};
-handle_call({connect, {by_number, N}}, _, _) ->
-    spawn_monitor(shell_calls, connect_known_network, [N]),
-    {reply, success, idle};
-handle_call({connect, {wpa_from_file, File}}, _, _) ->
-    spawn_monitor(shell_calls, connect_wpa, [File]),
-    {reply, success, idle};
-handle_call({connect, {wpa, Ssid, Key}}, _, _) ->
-    spawn_monitor(shell_calls, connect_wpa, [Ssid, Key]),
-    {reply, success, idle};
-handle_call({connect, {wep, Ssid, Key}}, _, _) ->
-    spawn_monitor(shell_calls, connect_wep, [Ssid, Key]),
-    {reply, success, idle};
-handle_call({connect, {unsecured, Ssid}}, _, _) ->
-    spawn_monitor(shell_calls, connect_unsecured, [Ssid]),
-    {reply, success, idle};
-handle_call({add_network, {wpa_from_file, File}}, _, _) ->
-    spawn_monitor(shell_calls, add_wpa_network, [File]),
-    {reply, success, idle};
-handle_call({add_network, {wpa, Ssid, Key}}, _, _) ->
-    spawn_monitor(shell_calls, add_wpa_network, [Ssid, Key]),
-    {reply, success, idle};
-handle_call({add_network, {wep, Ssid, Key}}, _, _) ->
-    spawn_monitor(shell_calls, add_wep_network, [Ssid, Key]),
-    {reply, success, idle};
-handle_call({add_network, {unsecured, Ssid}}, _, _) ->
-    spawn_monitor(shell_calls, add_unsecured_network, [Ssid]),
-    {reply, success, idle};
-handle_call({remove_network, Network_id}, _, _) ->
-    spawn_monitor(shell_calls, remove_network, [Network_id]),
-    {reply, success, idle};
-handle_call({remember_network, Network_id}, _, _) ->
-    spawn_monitor(shell_calls, remember_network, [Network_id]),
-    {reply, success, idle};
-handle_call({forget_network, Network_id}, _, _) ->
-    spawn_monitor(shell_calls, forget_network, [Network_id]),
-    {reply, success, idle};
-handle_call(list_networks, _, _) ->
-    {reply, shell_calls:list_networks(), idle};
-handle_call(_,_,_) ->
-    {reply, bad_call, idle}.
-
-handle_cast(_, _) ->
-    {noreply, idle}.
-
-handle_info(_, _) ->
-    {noreply, idle}.
-
-terminate(_, _) ->
-    {}.
-
-code_change(_, State, _) ->
-    {ok, State}.
+daemon(State) ->
+    io:format("foo"),
+    receive
+        {From, auto_connect} ->
+            spawn_monitor(shell_calls, auto_connect, []),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {connect, {by_number, N}}} ->
+            spawn_monitor(shell_calls, connect_known_network, [N]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {connect, {wpa_from_file, File}}} ->
+            spawn_monitor(shell_calls, connect_wpa, [File]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {connect, {wpa, Ssid, Key}}} ->
+            spawn_monitor(shell_calls, connect_wpa, [Ssid, Key]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {connect, {wep, Ssid, Key}}} ->
+            spawn_monitor(shell_calls, connect_wep, [Ssid, Key]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {connect, {unsecured, Ssid}}} ->
+            spawn_monitor(shell_calls, connect_unsecured, [Ssid]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {add_network, {wpa_from_file, File}}} ->
+            spawn_monitor(shell_calls, add_wpa_network, [File]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {add_network, {wpa, Ssid, Key}}} ->
+            spawn_monitor(shell_calls, add_wpa_network, [Ssid, Key]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {add_network, {wep, Ssid, Key}}} ->
+            spawn_monitor(shell_calls, add_wep_network, [Ssid, Key]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {add_network, {unsecured, Ssid}}} ->
+            spawn_monitor(shell_calls, add_unsecured_network, [Ssid]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {remove_network, Network_id}} ->
+            spawn_monitor(shell_calls, remove_network, [Network_id]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {remember_network, Network_id}} ->
+            spawn_monitor(shell_calls, remember_network, [Network_id]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, {forget_network, Network_id}} ->
+            spawn_monitor(shell_calls, forget_network, [Network_id]),
+            From ! {?DAEMON_HANDLE, success};
+        {From, list_networks} ->
+            From ! {?DAEMON_HANDLE, success, shell_calls:list_networks()};
+        {From, _} ->
+            From ! {?DAEMON_HANDLE, bad_call};
+        _ -> nop
+    end,
+    daemon(State).
