@@ -43,6 +43,7 @@ class NetworkFile:
 class Network(metaclass=abc.ABCMeta):
     CRUXIS_DIR = '/etc/cruxis'
     NETWORKS_DIR = os.path.join(CRUXIS_DIR, 'networks.d')
+    TEST_URL = 'xkcd.com'
 
     @classmethod
     def get_by_id(cls, network_id):
@@ -90,6 +91,11 @@ class Network(metaclass=abc.ABCMeta):
                                    "wpa_supplicant.conf"))
         except FileNotFoundError:
             pass
+
+    @classmethod
+    def check_connected(cls):
+        ret = subprocess.call(["ping", "-c3", "-Iwlan0", cls.TEST_URL])
+        return ret == 0
 
     def connect(self):
         self.disconnect()

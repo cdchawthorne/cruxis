@@ -199,6 +199,10 @@ class CruxisDaemon(dbus.service.Object):
     def disconnect(self):
         network.Network.disconnect()
 
+    @cruxis_method(in_signature='', out_signature='b')
+    def connected(self):
+        return network.Network.check_connected()
+
 
 if __name__ == '__main__':
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)

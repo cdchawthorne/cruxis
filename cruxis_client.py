@@ -65,6 +65,7 @@ class CruxisClient:
             cruxis forget NETWORK_ID_NUM
             cruxis list
             cruxis list_remembered
+            cruxis status
             cruxis help'''
            
     def __init__(self):
@@ -84,6 +85,7 @@ class CruxisClient:
                 'list': self.list_networks,
                 'list_remembered': self.list_remembered_networks,
                 'disconnect': self.disconnect,
+                'status': self.status,
                 'help': self.print_usage,
                 '-h': self.print_usage,
                 '--help': self.print_usage,
@@ -192,6 +194,13 @@ class CruxisClient:
 
     def disconnect(self):
         self.__daemon.disconnect()
+
+    def status(self):
+        connected = self.__daemon.connected()
+        if connected:
+            print('Connected')
+        else:
+            print('Disconnected')
 
     def print_usage(self):
         print(self.USAGE_MESSAGE, file=sys.stderr)
