@@ -1,0 +1,11 @@
+[Unit]
+Description=Cruxis Daemon
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/cruxis-daemon
+ExecStop=/bin/kill $MAINPID ; rm /run/cruxis-daemon.pid
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target

@@ -1,73 +1,9 @@
 #!/usr/bin/env bash
-function usage {
-    echo "usage: $(basename $0) {start|stop|restart}" 1>&2
-}
-
-. /etc/rc.conf
-. /etc/rc.d/functions
 
 name=cruxis-daemon
-erl_dir=/usr/lib/cruxis
-cruxis_conf_dir=/etc/cruxis
-ARGS=
-
-# erlang gets mad if you run it with $HOME empty
-export HOME=/root
-
-if [[ -z ${ERL_CRASH_DUMP} ]]; then
-    export ERL_CRASH_DUMP=/dev/null
-fi
+python_dir=/usr/lib/cruxis
 
 [[ -r "/etc/conf.d/${name}" ]] && . "/etc/conf.d/${name}"
 
-PID="$(pgrep -f -- "-pa ${erl_dir} -noshell -run cruxis_daemon start_daemon$")"
-function spawn-cruxis {
-    erl -setcookie "$(cat ${cruxis_conf_dir}/cookie)" -name cruxis_daemon@127.0.0.1 \
-        -pa ${erl_dir} -noshell -run cruxis_daemon start_daemon &> /dev/null < /dev/null &
-    disown
-}
-
-case $1 in
-    (start)
-        stat_busy "Starting ${name}"
-        if [[ -z "${PID}" ]]; then
-            spawn-cruxis ${ARGS} &> /dev/null
-            if [[ "$?" -eq 0 ]]; then
-                add_daemon "${name}"
-                stat_done
-            else
-                stat_fail
-                exit 1
-            fi
-        fi
-        ;;
-    (stop)
-        stat_busy "Stopping ${name}"
-        if [[ -n "${PID}" ]]; then
-            kill "${PID}" &> /dev/null
-            if [[ "$?" -eq 0 ]]; then
-                rm_daemon "${name}"
-                stat_done
-            else
-                stat_fail
-                exit 1
-            fi
-        fi
-        ;;
-    (restart)
-        "$0" stop
-        sleep 1
-        "$0" start
-        ;;
-    (status)
-        if [[ -n "${PID}" ]]; then
-            echo "Running"
-        else
-            echo "Stopped"
-        fi
-        ;;
-    (*)
-        usage
-        exit 1
-        ;;
-esac
+cd "${python_dir}"
+python3 cruxis_daemon.py

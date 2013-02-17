@@ -5,13 +5,15 @@ if [[ $(whoami) != root ]]; then
     exit 1
 fi
 
-erl_dir=/usr/lib/cruxis
+python_dir=/usr/lib/cruxis
 bin_dir=/usr/bin
 cruxis_src_dir="$(dirname "$(realpath "$0")")"
 cruxis_conf_dir=/etc/cruxis
+systemd_conf_dir=/etc/systemd/system
+dbus_conf_dir=/etc/dbus-1/system.d
 
-if [[ ! -d ${erl_dir} ]]; then
-    mkdir ${erl_dir}
+if [[ ! -d ${python_dir} ]]; then
+    mkdir ${python_dir}
 fi
 
 if [[ ! -d ${cruxis_conf_dir} ]]; then
@@ -26,17 +28,13 @@ if [[ ! -f ${cruxis_conf_dir}/networks ]]; then
     touch ${cruxis_conf_dir}/networks
 fi
 
-erlc -o ${erl_dir}/ "${cruxis_src_dir}"/{cruxis_client,cruxis_daemon,shell_calls}.erl 
-cp "${cruxis_src_dir}/cruxis-daemon" /etc/rc.d/
+cp "${cruxis_src_dir}"/*.py "${python_dir}"
+cp "${cruxis_src_dir}/cruxis-daemon" /usr/sbin/
 cp "${cruxis_src_dir}/cruxis" /usr/bin/
 
-if [[ ! -r ${cruxis_conf_dir}/cookie ]]; then
-    export HOME=${cruxis_conf_dir}
-    erl -sname cookie_monster -noshell -run init stop
-    mv ${cruxis_conf_dir}/.erlang.cookie ${cruxis_conf_dir}/cookie
-    chmod +r ${cruxis_conf_dir}/cookie
-fi
+cp "${cruxis_src_dir}/org.zelos.cruxis.conf" "${dbus_conf_dir}/"
+cp "${cruxis_src_dir}/cruxis-daemon.service" "${systemd_conf_dir}/"
 
-if [[ $(rc.d status cruxis-daemon) == Running ]]; then
-    rc.d restart cruxis-daemon
-fi
+# TODO: should this be conditional?
+systemctl --system daemon-reload
+systemctl reload cruxis-daemon.service

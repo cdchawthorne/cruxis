@@ -1,9 +1,11 @@
 A basic CLI network manager.
-Implemented in erlang.
+Implemented in python3.
 
-To run the daemon on startup, add cruxis-daemon to the DAEMONS array in
-/etc/rc.conf:
-DAEMONS=(... cruxis-daemon)
+Dependencies:
+python3
+python-dbus
+python-gobject2
+bash
 
-To connect to known networks on startup, add the following line to /etc/rc.local:
-cruxis auto_connect &
+To run the daemon on startup, run the following as root:
+systemctl enable cruxis-daemon.service
