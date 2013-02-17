@@ -73,8 +73,10 @@ class CruxisClient:
     def __get_command(self, command):
         commands_dict = {
                 'auto_connect': self.auto_connect,
+                'ac': self.auto_connect,
                 'connect': self.connect,
                 'connect_by_id': self.connect_by_id,
+                'ci': self.connect_by_id,
                 'add': self.add,
                 'remove': self.remove,
                 'remember': self.remember,
@@ -95,6 +97,7 @@ class CruxisClient:
         except KeyError:
             # Bad command
             self.print_usage()
+            return
         
 
         try:
