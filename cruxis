@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-python_dir=/usr/lib/cruxis
-cd "${python_dir}"
-python3 cruxis_client.py "$@"

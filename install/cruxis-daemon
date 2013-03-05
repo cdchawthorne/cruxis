@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 name=cruxis-daemon
-python_dir=/usr/lib/cruxis
+python_dir=/usr/lib/cruxis/src
+export PYTHONPATH=${python_dir}
 
 [[ -r "/etc/conf.d/${name}" ]] && . "/etc/conf.d/${name}"
 
 cd "${python_dir}"
-python3 cruxis_daemon.py
+python3 cruxis/cruxis_daemon.py

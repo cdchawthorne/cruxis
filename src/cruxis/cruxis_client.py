@@ -3,15 +3,16 @@ import getpass
 import sys
 import types
 
-import cruxis_daemon
-import exceptions
+import cruxis.cruxis_daemon
+import cruxis.exceptions
 
 
 class _DaemonProxy:
     def __init__(self):
         bus = dbus.SystemBus()
-        self.__daemon = bus.get_object(cruxis_daemon.CruxisDaemon.BUS_NAME,
-                                       cruxis_daemon.CruxisDaemon.OBJECT_PATH)
+        self.__daemon = bus.get_object(
+                cruxis.cruxis_daemon.CruxisDaemon.BUS_NAME,
+                cruxis.cruxis_daemon.CruxisDaemon.OBJECT_PATH)
 
     def __getattr__(self, name):
         attr = getattr(self.__daemon, name)
@@ -24,7 +25,9 @@ class _DaemonProxy:
     def __wrap_method(self, method):
         def wrapped(*args, **kwargs):
             assert 'dbus_interface' not in kwargs
-            kwargs['dbus_interface'] = cruxis_daemon.CruxisDaemon.INTERFACE
+            kwargs['dbus_interface'] = (
+                    cruxis.cruxis_daemon.CruxisDaemon.INTERFACE)
+
             packed = method(*args, **kwargs)
 
             try:
@@ -36,9 +39,11 @@ class _DaemonProxy:
             if error_key == "success":
                 return ret
             else:
-                raise exceptions.CruxisException.create_from_key(error_key, fields)
+                raise cruxis.exceptions.CruxisException.create_from_key(
+                        error_key, fields)
         
         return wrapped
+
 
 class CruxisClient:
     NETWORK_TYPE_WPA = 'wpa'
@@ -60,6 +65,7 @@ class CruxisClient:
             cruxis connect_by_id NETWORK_ID_NUM
             cruxis add (wpa|wep|unsecured) SSID
             cruxis add WPA_CONF_FILE
+            cruxis scan
             cruxis remove NETWORK_ID_NUM
             cruxis remember NETWORK_ID_NUM
             cruxis forget NETWORK_ID_NUM
@@ -79,6 +85,7 @@ class CruxisClient:
                 'connect_by_id': self.connect_by_id,
                 'ci': self.connect_by_id,
                 'add': self.add,
+                'scan': self.scan,
                 'remove': self.remove,
                 'remember': self.remember,
                 'forget': self.forget,
@@ -107,7 +114,7 @@ class CruxisClient:
         except TypeError:
             # Wrong number of arguments
             self.print_usage()
-        except exceptions.UsageError:
+        except cruxis.exceptions.UsageError:
             self.print_usage()
 
     def auto_connect(self):
@@ -125,7 +132,7 @@ class CruxisClient:
         try:
             network_id = int(network_id_str)
         except ValueError:
-            raise exceptions.UsageError()
+            raise cruxis.exceptions.UsageError()
 
         self.__daemon.remember_network(network_id)
 
@@ -133,7 +140,7 @@ class CruxisClient:
         try:
             network_id = int(network_id_str)
         except ValueError:
-            raise exceptions.UsageError()
+            raise cruxis.exceptions.UsageError()
 
         self.__daemon.forget_network(network_id)
 
@@ -141,7 +148,7 @@ class CruxisClient:
         try:
             network_id = int(network_id_str)
         except ValueError:
-            raise exceptions.UsageError()
+            raise cruxis.exceptions.UsageError()
 
         self.__daemon.connect_by_id(network_id, timeout=32)
 
@@ -184,11 +191,14 @@ class CruxisClient:
         self.__daemon.add_network(self.__network_types[protocol],
                                   add_args)
 
+    def scan(self):
+        print(self.__daemon.scan())
+
     def remove(self, network_id_str):
         try:
             network_id = int(network_id_str)
         except ValueError:
-            raise exceptions.UsageError()
+            raise cruxis.exceptions.UsageError()
 
         self.__daemon.remove_network(network_id)
 
