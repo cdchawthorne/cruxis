@@ -106,16 +106,17 @@ class CruxisClient:
         except KeyError:
             # Bad command
             self.print_usage()
-            return
-        
+            sys.exit(1)
 
         try:
             command(*args[1:])
         except TypeError:
             # Wrong number of arguments
             self.print_usage()
+            sys.exit(1)
         except cruxis.exceptions.UsageError:
             self.print_usage()
+            sys.exit(1)
 
     def auto_connect(self):
         self.__daemon.auto_connect(timeout=152)

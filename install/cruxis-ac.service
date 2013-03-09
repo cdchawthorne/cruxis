@@ -1,0 +1,13 @@
+[Unit]
+Description=Cruxis Auto-connect
+Requires=cruxis-daemon.service
+After=cruxis-daemon.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cruxis auto_connect
+#ExecStart=/bin/zsh -c "/usr/bin/cruxis auto_connect &|"
+#ExecStart=/bin/zsh -c touch /home/cdchawthorne/foobar &|
+
+[Install]
+WantedBy=multi-user.target

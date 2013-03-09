@@ -2,7 +2,8 @@
 Description=Cruxis Daemon
 
 [Service]
-Type=simple
+Type=dbus
+BusName=org.zelos.cruxis.daemon
 ExecStart=/usr/sbin/cruxis-daemon
 ExecStop=/bin/kill $MAINPID ; rm /run/cruxis-daemon.pid
 ExecReload=/bin/kill -HUP $MAINPID

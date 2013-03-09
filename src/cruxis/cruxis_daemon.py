@@ -9,6 +9,7 @@ import os
 
 import cruxis.exceptions
 import cruxis.network
+import cruxis.network_file
 
 class CruxisMethod:
     def __init__(self, in_signature='', out_signature='', default_value=None):
@@ -115,7 +116,7 @@ class CruxisDaemon(dbus.service.Object):
 
     @cruxis_method(in_signature='', out_signature='')
     def auto_connect(self):
-        network_file = cruxis.network.NetworkFile(self.NETWORK_FILE)
+        network_file = cruxis.network_file.NetworkFile(self.NETWORK_FILE)
         network_ids = network_file.remembered_ids
 
         try:
@@ -144,44 +145,37 @@ class CruxisDaemon(dbus.service.Object):
 
     @cruxis_method(in_signature='sas', out_signature='')
     def add_network(self, network_type, network_args):
-        try:
-            network_factory = (
-                    cruxis.network.Network.get_factory_by_name(network_type))
-        except KeyError:
-            raise cruxis.exceptions.UnknownNetworkTypeError(network_type)
+        network = cruxis.network.Network.create_network(network_type,
+                                                        *network_args)
 
-        net = network_factory(*network_args)
-
-        next_id = cruxis.network.Network.next_unused_id()
-        net.write_to_fs(next_id)
+        next_id = cruxis.network.StoredNetwork.next_unused_id()
+        cruxis.network.StoredNetwork.store_at_id(network, next_id)
 
     @cruxis_method(in_signature='i', out_signature='')
     def remove_network(self, network_id):
-        if not cruxis.network.Network.is_id_used(network_id):
+        if not cruxis.network.StoredNetwork.is_id_used(network_id):
             raise cruxis.exceptions.NetworkNotFoundError(network_id)
 
-        network_file = cruxis.network.NetworkFile(self.NETWORK_FILE)
+        network_file = cruxis.network_file.NetworkFile(self.NETWORK_FILE)
         network_file.forget_network(network_id)
-        cruxis.network.Network.remove_from_fs(network_id)
+        cruxis.network.StoredNetwork.remove_network(network_id)
 
     @cruxis_method(in_signature='sas', out_signature='')
     def connect_network(self, network_type, network_args):
-        try:
-            network_factory = cruxis.network.Network.get_factory_by_name(
-                    network_type)
-        except KeyError:
-            raise cruxis.exceptions.UnknownNetworkTypeError(network_type)
 
-        self.__connect_to(network_factory(*network_args))
+        network = cruxis.network.Network.create_network(network_type,
+                                                        *network_args)
+
+        self.__connect_to(network)
 
     @cruxis_method(in_signature='', out_signature='a(is)')
     def list_networks(self):
         return [(network_id, cruxis.network.Network.get_by_id(network_id).ssid)
-                for network_id in cruxis.network.Network.used_ids()]
+                for network_id in cruxis.network.StoredNetwork.used_ids()]
 
     @cruxis_method(in_signature='', out_signature='a(is)')
     def list_remembered_networks(self):
-        network_file = cruxis.network.NetworkFile(self.NETWORK_FILE)
+        network_file = cruxis.network_file.NetworkFile(self.NETWORK_FILE)
         remembered_ids = network_file.remembered_ids
         try:
             return [(network_id,
@@ -193,17 +187,19 @@ class CruxisDaemon(dbus.service.Object):
 
     @cruxis_method(in_signature='i', out_signature='')
     def remember_network(self, network_id):
-        if not cruxis.network.Network.is_id_used(network_id):
+        if not cruxis.network.StoredNetwork.is_id_used(network_id):
             raise cruxis.exceptions.NetworkNotFoundError(network_id)
 
-        cruxis.network.NetworkFile(self.NETWORK_FILE).remember_network(network_id)
+        network_file = cruxis.network_file.NetworkFile(self.NETWORK_FILE)
+        network_file.remember_network(network_id)
 
     @cruxis_method(in_signature='i', out_signature='')
     def forget_network(self, network_id):
-        if not cruxis.network.Network.is_id_used(network_id):
+        if not cruxis.network.StoredNetwork.is_id_used(network_id):
             raise cruxis.exceptions.NetworkNotFoundError(network_id)
 
-        cruxis.network.NetworkFile(self.NETWORK_FILE).forget_network(network_id)
+        network_file = cruxis.network_file.NetworkFile(self.NETWORK_FILE)
+        network_file.forget_network(network_id)
 
     @cruxis_method(in_signature='', out_signature='')
     def disconnect(self):
