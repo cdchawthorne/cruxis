@@ -6,7 +6,6 @@ if [[ $(whoami) != root ]]; then
 fi
 
 cruxis_dir=/usr/lib/cruxis
-bin_dir=/usr/bin
 cruxis_install_dir="$(dirname "$(realpath "$0")")"
 cruxis_src_dir="${cruxis_install_dir}"/../src
 cruxis_conf_dir=/etc/cruxis

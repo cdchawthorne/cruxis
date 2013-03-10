@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+if [[ $(whoami) != root ]]; then
+    echo "must be run as root" 1>&2
+    exit 1
+fi
+
+cruxis_dir=/usr/lib/cruxis
+cruxis_conf_dir=/etc/cruxis
+systemd_conf_dir=/etc/systemd/system
+dbus_conf_dir=/etc/dbus-1/system.d
+daemon_exec=/usr/sbin/cruxis-daemon
+client_exec=/usr/bin/cruxis
+
+echo "WARNING: there's a lot of rm -rf going on in here." 1>&2
+echo "         If there's a bug in this script and you run it as sudo," 1>&2
+echo "         very bad things might happen. Use at your own risk!" 1>&2
+
+echo
+
+echo "A safer way might be to manually remove the following:" 1>&2
+echo "${cruxis_dir}/" 1>&2
+echo "${cruxis_conf_dir}/" 1>&2
+echo "${daemon_exec}" 1>&2
+echo "${client_exec}" 1>&2
+echo "${dbus_conf_dir}/org.zelos.cruxis.conf" 1>&2
+echo "${systemd_conf_dir}/cruxis-daemon.service" 1>&2
+echo "${systemd_conf_dir}/cruxis-ac.service" 1>&2
+
+echo
+
+echo "Note: if any of the above lines looks funny or is empty," 1>&2
+echo "      it's potentially an issue with the script." 1>&2
+
+echo "Would you like to use this script anyway? (y/n)" 1>&2
+read should_continue
+
+if [[ "${should_continue}" != y ]]; then
+    exit 0
+fi
+
+systemctl stop cruxis-daemon.service
+
+rm -rf "${cruxis_dir}"
+rm -rf "${cruxis_conf_dir}"
+rm -f "${daemon_exec}"
+rm -f "${client_exec}"
+rm -f "${dbus_conf_dir}/org.zelos.cruxis.conf"
+rm -f "${systemd_conf_dir}/cruxis-daemon.service"
+rm -f "${systemd_conf_dir}/cruxis-ac.service"
+
+# TODO: should this be conditional? (Or here at all?)
+systemctl --system daemon-reload

@@ -12,26 +12,11 @@ class StoredNetwork(metaclass=abc.ABCMeta):
     __network_types = {}
 
     @classmethod
-    def _register_subclass(cls, network_type):
-        info_files = network_type.INFO_FILES
-        assert info_files not in cls.__network_types
-        cls.__network_types[info_files] = network_type
+    def __next_unused_id(cls):
+        used_ids = frozenset(int(id_str)
+                             for id_str 
+                             in os.listdir(cls.NETWORKS_DIR))
 
-    # TODO: for the love of God, Montresor, change this interface
-    @classmethod
-    def used_ids(cls):
-        ids = [int(id_str) for id_str in os.listdir(cls.NETWORKS_DIR)]
-        ids.sort()
-        return ids
-
-    @classmethod
-    def is_id_used(cls, network_id):
-        path = os.path.join(cls.NETWORKS_DIR, str(network_id))
-        return os.path.exists(path)
-
-    @classmethod
-    def next_unused_id(cls):
-        used_ids = [int(id_str) for id_str in os.listdir(cls.NETWORKS_DIR)]
         i = 0
         while i in used_ids:
             i = i + 1
@@ -39,7 +24,33 @@ class StoredNetwork(metaclass=abc.ABCMeta):
         return i
 
     @classmethod
+    def _register_subclass(cls, network_type):
+        info_files = network_type.INFO_FILES
+        assert info_files not in cls.__network_types
+        cls.__network_types[info_files] = network_type
+
+    @classmethod
+    def used_ids(cls):
+        '''Return a sorted list of the currently used network IDs'''
+        ids = [int(id_str) for id_str in os.listdir(cls.NETWORKS_DIR)]
+        ids.sort()
+        return ids
+
+    @classmethod
+    def is_id_used(cls, network_id):
+        '''
+        Check whether the id is in use. Quicker than checking membership
+        of cls.used_ids() (I think).
+        '''
+        path = os.path.join(cls.NETWORKS_DIR, str(network_id))
+        return os.path.exists(path)
+
+    @classmethod
     def get_by_id(cls, network_id):
+        '''
+        Get a network by its network ID.
+        Return an instance of StoredNetwork.
+        '''
         network_path = os.path.join(cls.NETWORKS_DIR, str(network_id))
         if not os.path.exists(network_path):
             raise cruxis.exceptions.NetworkNotFoundError(network_id)
@@ -51,26 +62,30 @@ class StoredNetwork(metaclass=abc.ABCMeta):
 
     @classmethod
     def remove_network(cls, network_id):
+        '''Delete a network from the filesystem'''
         path = os.path.join(cls.NETWORKS_DIR, str(network_id))
         if not os.path.exists(path):
             raise cruxis.exceptions.NetworkNotFoundError(network_id)
 
         shutil.rmtree(path)
 
-    def store_at_id(self, network_id):
+    def store(self):
+        '''Store network information to a new network ID in the filesystem'''
+        network_id = self.__next_unused_id()
         path = os.path.join(cls.NETWORKS_DIR, str(network_id))
-        if os.path.exists(path):
-            raise cruxis.exceptions.NetworkIdInUseError(network_id)
-
+        assert not os.path.exists(path)
         os.mkdir(path)
 
         self._write_to_path(path)
 
     @abc.abstractmethod
     def _write_to_path(self, path):
-        pass
+        '''Store network information to the pre-existing directory path'''
 
     @classmethod
     @abc.abstractmethod
-    def _get_by_path(self, path):
-        pass
+    def _get_by_path(cls, path):
+        '''
+        Retrieve network information from the pre-existing directory path.
+        Returns an instance of cls.
+        '''

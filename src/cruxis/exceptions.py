@@ -34,6 +34,7 @@ class CruxisException(Exception, metaclass=abc.ABCMeta):
         return self.formatted_message
 
 
+# TODO: use type to make the name correctly
 def cruxis_exception(key, message_template):
     assert key != "success", '''Key "success" is reserved'''
 
@@ -68,8 +69,6 @@ UnknownNetworkTypeError = cruxis_exception('unknown_network_type_error',
                                            'Unknown network type: {}')
 UsageError = cruxis_exception('usage_error',
                               'Error processing command line arguments')
-NetworkIdInUseError = cruxis_exception('network_id_in_use_error',
-                                       'The network id {} is already in use')
 CorruptNetworksFileError = cruxis_exception(
         'corrupt_networks_file_error',
         'The networks file {} has been corrupted: id {} does not exist')

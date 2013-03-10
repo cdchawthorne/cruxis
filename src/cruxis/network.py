@@ -6,10 +6,9 @@ import subprocess
 
 import cruxis.exceptions
 
-#TODO: replace this with _NetworkMetaclass
+# TODO: replace this with _NetworkMetaclass
 def network_type(cls):
     Network._register_subclass(cls)
-    #TODO: do I need this line?
     return cls
 
 # TODO: should this track the currently connected network?

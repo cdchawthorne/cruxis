@@ -184,8 +184,7 @@ class CruxisDaemon(dbus.service.Object):
         network = cruxis.network.Network.create_network(network_type,
                                                         *network_args)
 
-        next_id = cruxis.stored_network.StoredNetwork.next_unused_id()
-        network.store_at_id(next_id)
+        network.store()
 
     @cruxis_method(in_signature='i', out_signature='')
     def remove_network(self, network_id):
@@ -207,10 +206,13 @@ class CruxisDaemon(dbus.service.Object):
     def list_remembered_networks(self):
         networks_file = cruxis.networks_file.NetworksFile(self.NETWORKS_FILE)
         remembered_ids = networks_file.remembered_ids
+
+        def network_pair(network_id):
+            network = cruxis.stored_network.StoredNetwork.get_by_id(network_id)
+            return (network_id, network.ssid)
+
         try:
-            return [(network_id,
-                     cruxis.stored_network.StoredNetwork.get_by_id(network_id).ssid)
-                    for network_id in remembered_ids]
+            return [network_pair(network_id) for network_id in remembered_ids]
         except cruxis.exceptions.NetworkNotFoundError as e:
             raise cruxis.exceptions.CorruptNetworksFileError(self.NETWORKS_FILE,
                                                              e.fields[0])
