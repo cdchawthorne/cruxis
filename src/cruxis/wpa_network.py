@@ -77,7 +77,8 @@ class _WpaConfFile:
 
 
 @cruxis.network.network_type
-class WpaNetwork(cruxis.network.Network):
+@cruxis.stored_network.stored_network
+class WpaNetwork(cruxis.network.Network, cruxis.stored_network.StoredNetwork):
     NAME = 'wpa'
     INFO_FILES = ("ssid", "wpa_supplicant.conf")
 
@@ -94,10 +95,8 @@ class WpaNetwork(cruxis.network.Network):
         return self.__ssid
 
     @classmethod
-    def _create_from_id(cls, network_id):
-        conf_file = os.path.join(cls.NETWORKS_DIR,
-                                 str(network_id),
-                                 "wpa_supplicant.conf")
+    def _get_by_path(cls, network_path):
+        conf_file = os.path.join(network_path, "wpa_supplicant.conf")
 
         return cls(conf_file)
 

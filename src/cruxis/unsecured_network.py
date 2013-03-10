@@ -5,7 +5,9 @@ import cruxis.exceptions
 import cruxis.network
 
 @cruxis.network.network_type
-class UnsecuredNetwork(cruxis.network.Network):
+@cruxis.stored_network.stored_network
+class UnsecuredNetwork(cruxis.network.Network,
+                       cruxis.stored_network.StoredNetwork):
     NAME = 'unsecured'
     INFO_FILES = ("ssid",)
 
@@ -13,10 +15,7 @@ class UnsecuredNetwork(cruxis.network.Network):
         self.__ssid = ssid
 
     @classmethod
-    def _create_from_id(cls, network_id):
-        network_path = os.path.join(cls.NETWORKS_DIR,
-                                    str(network_id))
-
+    def _get_by_path(cls, network_path):
         with open(os.path.join(network_path, "ssid"), "r") as f:
             ssid = f.readline().rstrip()
 

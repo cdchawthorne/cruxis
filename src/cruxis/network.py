@@ -8,25 +8,22 @@ import cruxis.exceptions
 
 #TODO: replace this with _NetworkMetaclass
 def network_type(cls):
-    Network._register_network(cls)
+    Network._register_subclass(cls)
+    #TODO: do I need this line?
+    return cls
 
 # TODO: should this track the currently connected network?
 class Network(metaclass=abc.ABCMeta):
     CRUXIS_DIR = '/etc/cruxis'
-    NETWORKS_DIR = os.path.join(CRUXIS_DIR, 'networks.d')
     TEST_URL = 'xkcd.com'
 
-    __id_network_factories = {}
-    __data_network_factories = {}
+    __network_types = {}
 
     @classmethod
-    def _register_network(cls, network_type):
-        info_files = network_type.INFO_FILES
+    def _register_subclass(cls, network_type):
         name = network_type.NAME
-        assert info_files not in cls.__id_network_factories
-        assert name not in cls.__data_network_factories
-        cls.__id_network_factories[info_files] = network_type._create_from_id
-        cls.__data_network_factories[name] = network_type
+        assert name not in cls.__network_types
+        cls.__network_types[name] = network_type
 
     @staticmethod
     def scan(currently_connected):
@@ -41,36 +38,21 @@ class Network(metaclass=abc.ABCMeta):
         return scan_output
 
     @classmethod
-    def create_network(cls, name, *args, **kwargs):
+    def create_network(cls, type_name, *args, **kwargs):
         try:
-            network_factory = cls.__data_network_factories[name]
+            network_type = cls.__network_types[type_name]
         except KeyError as e:
             raise UnknownNetworkTypeError(name)
 
-        return network_factory(*args, **kwargs)
-
-    # TODO: migrate this to StoredNetwork
-    #       The derived network registration should probably inform
-    #       StoredNetwork about the relevant info files
-    @classmethod
-    def get_by_id(cls, network_id):
-        network_path = os.path.join(cls.NETWORKS_DIR, str(network_id))
-        if not os.path.exists(network_path):
-            raise cruxis.exceptions.NetworkNotFoundError(network_id)
-
-        info_files = os.listdir(network_path)
-        info_files.sort()
-        network_factory = cls.__id_network_factories[tuple(info_files)]
-        return network_factory(network_id)
+        return network_type(*args, **kwargs)
 
     @classmethod
     def disconnect(cls):
         subprocess.call(["dhcpcd", "-x", "wlan0"])
         subprocess.call(["pkill", "wpa_supplicant"])
         subprocess.check_call(["ip", "link", "set", "wlan0", "down"])
-        #TODO: fix this
         try:
-            os.remove(os.path.join(cls.NETWORKS_DIR,
+            os.remove(os.path.join(cls.CRUXIS_DIR,
                                    "wpa_supplicant.conf"))
         except FileNotFoundError:
             pass
@@ -101,15 +83,6 @@ class Network(metaclass=abc.ABCMeta):
     def ssid(self):
         pass
 
-    @classmethod
-    @abc.abstractmethod
-    def _create_from_id(cls, network_id):
-        pass
-
     @abc.abstractmethod
     def _specific_connect(self):
-        pass
-
-    @abc.abstractmethod
-    def write_to_path(self, path):
         pass

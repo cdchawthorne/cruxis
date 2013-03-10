@@ -4,7 +4,8 @@ import subprocess
 import cruxis.network
 
 @cruxis.network.network_type
-class WepNetwork(cruxis.network.Network):
+@cruxis.stored_network.stored_network
+class WepNetwork(cruxis.network.Network, cruxis.stored_network.StoredNetwork):
     NAME = 'wep'
     INFO_FILES = ("key", "ssid")
 
@@ -13,10 +14,7 @@ class WepNetwork(cruxis.network.Network):
         self.__key = key
 
     @classmethod
-    def _create_from_id(cls, network_id):
-        network_path = os.path.join(cls.NETWORKS_DIR,
-                                    str(network_id))
-
+    def _get_by_path(cls, network_path):
         with open(os.path.join(network_path, "ssid"), "r") as f:
             ssid = f.readline().rstrip()
 
