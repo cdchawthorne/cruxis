@@ -53,7 +53,7 @@ class StoredNetwork(metaclass=abc.ABCMeta):
         '''
         network_path = os.path.join(cls.NETWORKS_DIR, str(network_id))
         if not os.path.exists(network_path):
-            raise cruxis.exceptions.NetworkNotFoundError(network_id)
+            raise cruxis.exceptions.NetworkNotFoundError(str(network_id))
 
         info_files = os.listdir(network_path)
         info_files.sort()
@@ -65,7 +65,7 @@ class StoredNetwork(metaclass=abc.ABCMeta):
         '''Delete a network from the filesystem'''
         path = os.path.join(cls.NETWORKS_DIR, str(network_id))
         if not os.path.exists(path):
-            raise cruxis.exceptions.NetworkNotFoundError(network_id)
+            raise cruxis.exceptions.NetworkNotFoundError(str(network_id))
 
         shutil.rmtree(path)
 

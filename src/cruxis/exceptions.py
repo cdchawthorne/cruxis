@@ -1,8 +1,5 @@
 import abc
 
-#TODO: have DerivedException assert that the right number of arguments are
-#      given for MESSAGE_TEMPLATE
-
 class CruxisException(Exception, metaclass=abc.ABCMeta):
     __exceptions_dict = {}
 
@@ -34,13 +31,27 @@ class CruxisException(Exception, metaclass=abc.ABCMeta):
         return self.formatted_message
 
 
-# TODO: use type to make the name correctly
-def cruxis_exception(key, message_template):
+def cruxis_exception(name, key, message_template):
     assert key != "success", '''Key "success" is reserved'''
 
-    class DerivedException(CruxisException):
+    class _DerivedExceptionMetaclass(abc.ABCMeta):
+        def __new__(cls, ignored_name, bases, namespace):
+            return super(_DerivedExceptionMetaclass, cls).__new__(
+                    cls, name, bases, namespace)
+
+    class DerivedException(CruxisException,
+                           metaclass=_DerivedExceptionMetaclass):
+
         def __init__(self, *fields):
             self.__fields = fields
+
+            try:
+                self.formatted_message
+            except IndexError:
+                error_message = ("CruxisException [{}] initialized with"
+                                 "insufficient number of fields")
+                error_message = error_message.format(name)
+                assert False, error_message
 
         @property
         def fields(self):
@@ -59,20 +70,27 @@ def cruxis_exception(key, message_template):
     return DerivedException
 
 
-ConnectionError = cruxis_exception('connection_error', 
+ConnectionError = cruxis_exception('ConnectionError',
+                                   'connection_error', 
                                    'Error connecting to ssid {}')
-AutoConnectError = cruxis_exception('auto_connect_error',
+AutoConnectError = cruxis_exception('AutoConnectError',
+                                    'auto_connect_error',
                                     'AutoConnect failed')
-NetworkNotFoundError = cruxis_exception('network_not_found_error',
+NetworkNotFoundError = cruxis_exception('NetworkNotFoundError',
+                                        'network_not_found_error',
                                         'Network not found: {}')
-UnknownNetworkTypeError = cruxis_exception('unknown_network_type_error',
+UnknownNetworkTypeError = cruxis_exception('UnknownNetworkTypeError',
+                                           'unknown_network_type_error',
                                            'Unknown network type: {}')
-UsageError = cruxis_exception('usage_error',
+UsageError = cruxis_exception('UsageError', 'usage_error',
                               'Error processing command line arguments')
 CorruptNetworksFileError = cruxis_exception(
+        'CorruptNetworksFileError',
         'corrupt_networks_file_error',
         'The networks file {} has been corrupted: id {} does not exist')
 BadWpaConfFileError = cruxis_exception(
+        'BadWpaConfFileError',
         'bad_wpa_conf_file_error',
         'Bad WPA conf file: {}')
-BadKeyError = cruxis_exception('bad_key_error', 'Invalid WEP key for ssid {}')
+BadKeyError = cruxis_exception('BadKeyError', 'bad_key_error', 
+                               'Invalid WEP key for ssid {}')
