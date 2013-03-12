@@ -24,7 +24,8 @@ class StoredNetwork(metaclass=abc.ABCMeta):
         return i
 
     @classmethod
-    def _register_subclass(cls, network_type):
+    def register_network_type(cls, network_type):
+        assert hasattr(network_type, 'INFO_FILES')
         info_files = network_type.INFO_FILES
         assert info_files not in cls.__network_types
         cls.__network_types[info_files] = network_type

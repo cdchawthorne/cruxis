@@ -76,9 +76,7 @@ class _WpaConfFile:
             return alternate_filename
 
 
-@cruxis.network.network_type
-@cruxis.stored_network.stored_network
-class WpaNetwork(cruxis.network.Network, cruxis.stored_network.StoredNetwork):
+class WpaNetwork(cruxis.network.Network):
     NAME = 'wpa'
     INFO_FILES = ("ssid", "wpa_supplicant.conf")
 

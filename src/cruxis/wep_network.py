@@ -3,9 +3,7 @@ import subprocess
 
 import cruxis.network
 
-@cruxis.network.network_type
-@cruxis.stored_network.stored_network
-class WepNetwork(cruxis.network.Network, cruxis.stored_network.StoredNetwork):
+class WepNetwork(cruxis.network.Network):
     NAME = 'wep'
     INFO_FILES = ("key", "ssid")
 

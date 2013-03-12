@@ -4,10 +4,8 @@ import subprocess
 import cruxis.exceptions
 import cruxis.network
 
-@cruxis.network.network_type
-@cruxis.stored_network.stored_network
-class UnsecuredNetwork(cruxis.network.Network,
-                       cruxis.stored_network.StoredNetwork):
+class UnsecuredNetwork(cruxis.network.Network):
+
     NAME = 'unsecured'
     INFO_FILES = ("ssid",)
 

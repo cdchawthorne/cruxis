@@ -7,8 +7,8 @@ import gobject
 import inspect
 import os
 
+import cruxis.connector
 import cruxis.exceptions
-import cruxis.network
 import cruxis.networks_file
 
 class CruxisMethod:
@@ -91,7 +91,7 @@ class CruxisDaemon(dbus.service.Object):
     BUS_NAME = 'org.zelos.cruxis.daemon'
     OBJECT_PATH = '/org/zelos/cruxis/daemon'
     INTERFACE = 'org.zelos.cruxis.daemon_interface'
-    NETWORKS_FILE = os.path.join(cruxis.network.Network.CRUXIS_DIR,
+    NETWORKS_FILE = os.path.join(cruxis.connector.Connector.CRUXIS_DIR,
                                  'networks')
     PID_FILE = '/run/cruxis-daemon.pid'
 
@@ -133,7 +133,7 @@ class CruxisDaemon(dbus.service.Object):
             raise cruxis.exceptions.CorruptNetworksFileError(self.NETWORKS_DIR,
                                                              e.fields[0])
 
-        ssids = cruxis.network.Network.scan_ssids()
+        ssids = cruxis.connector.Connector.scan_ssids()
         for network in remembered_networks:
             if network.ssid in ssids:
                 try:
@@ -148,7 +148,7 @@ class CruxisDaemon(dbus.service.Object):
     @cruxis_method(in_signature='sas', out_signature='')
     def connect_network(self, network_type, network_args):
 
-        network = cruxis.network.Network.create_network(network_type,
+        network = cruxis.connector.Connector.create_network(network_type,
                                                         *network_args)
 
         self.__connect_to(network)
@@ -161,15 +161,15 @@ class CruxisDaemon(dbus.service.Object):
     @cruxis_method(in_signature='', out_signature='')
     def disconnect(self):
         self.__connected = False
-        cruxis.network.Network.disconnect()
+        cruxis.connector.Connector.disconnect()
 
     @cruxis_method(in_signature='', out_signature='b')
     def connected(self):
-        return cruxis.network.Network.check_connected()
+        return cruxis.connector.Connector.check_connected()
 
     @cruxis_method(in_signature='', out_signature='s')
     def scan(self):
-        return cruxis.network.Network.scan(self.__connected)
+        return cruxis.connector.Connector.scan(self.__connected)
 
     def run_maintenance(self):
         return True
@@ -181,8 +181,8 @@ class CruxisDaemon(dbus.service.Object):
 
     @cruxis_method(in_signature='sas', out_signature='')
     def add_network(self, network_type, network_args):
-        network = cruxis.network.Network.create_network(network_type,
-                                                        *network_args)
+        network = cruxis.connector.Connector.create_network(network_type,
+                                                            *network_args)
 
         network.store()
 
