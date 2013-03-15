@@ -79,6 +79,8 @@ class _WpaConfFile:
 class WpaNetwork(cruxis.network.Network):
     NAME = 'wpa'
     INFO_FILES = ("ssid", "wpa_supplicant.conf")
+    DEFAULT_CONF_FILE = os.path.join(cruxis.network.Network.CRUXIS_DIR,
+                                     "wpa_supplicant.conf")
 
     def __init__(self, *args, **kwargs):
         '''
@@ -87,6 +89,8 @@ class WpaNetwork(cruxis.network.Network):
         '''
         self.__conf_file = _WpaConfFile(*args, **kwargs)
         self.__ssid = self.__conf_file.ssid
+        self.__supplicant = None
+        self.__remove_default_conf = False
 
     @property
     def ssid(self):
@@ -99,21 +103,37 @@ class WpaNetwork(cruxis.network.Network):
         return cls(conf_file)
 
     def _specific_connect(self):
-        subprocess.check_call(["ip", "link", "set", "wlan0", "up"])
-        subprocess.check_call(["iwconfig", "wlan0", "essid", self.__ssid])
+        subprocess.check_call(["ip", "link", "set", self.INTERFACE, "up"])
+        subprocess.check_call(
+                ["iwconfig", self.INTERFACE, "essid", self.__ssid])
 
-        default_conf_path = os.path.join(self.CRUXIS_DIR,
-                                         'wpa_supplicant.conf')
-        conf_filename = self.__conf_file.get_filename(default_conf_path)
-        supplicant = subprocess.Popen(["wpa_supplicant", "-Dwext", "-iwlan0",
+        conf_filename = self.__conf_file.get_filename(self.DEFAULT_CONF_FILE)
+        supplicant = subprocess.Popen(["wpa_supplicant", "-Dwext",
+                                       "-i", self.INTERFACE,
                                        "-c", conf_filename])
 
         try:
-            subprocess.check_call(["dhcpcd", "wlan0"])
+            subprocess.check_call(["dhcpcd", self.INTERFACE])
         except subprocess.CalledProcessError as e:
             supplicant.terminate()
-            subprocess.call(["ip", "link", "set", "wlan0", "down"])
+            supplicant.wait()
+            subprocess.call(["ip", "link", "set", self.INTERFACE, "down"])
             raise cruxis.exceptions.ConnectionError(self.__ssid) from e
+
+        self.__supplicant = supplicant
+        self.__remove_default_conf = (self.DEFAULT_CONF_FILE == conf_filename)
+
+    def _specific_disconnect(self):
+        subprocess.check_call(["dhcpcd", "-x", self.INTERFACE])
+        self.__supplicant.terminate()
+        self.__supplicant.wait()
+        self.__supplicant = None
+        subprocess.check_call(["ip", "link", "set", self.INTERFACE, "down"])
+
+        if self.__remove_default_conf:
+            os.remove(self.DEFAULT_CONF_FILE)
+
+        self.__remove_default_conf = False
 
     def _write_to_path(self, path):
         with open(os.path.join(path, "ssid"), "w") as f:
