@@ -107,14 +107,6 @@ class CruxisDaemon(dbus.service.Object):
 
         self.__connected = False
 
-    # Makes sure that self.__connected is set correctly when attempting a
-    # connection
-    def __connect_to(self, network):
-        self.__connected = False
-        network.connect()
-        self.__connected = True
-
-
     ######################
     # Connection Methods #
     ######################
@@ -137,7 +129,7 @@ class CruxisDaemon(dbus.service.Object):
         for network in remembered_networks:
             if network.ssid in ssids:
                 try:
-                    self.__connect_to(network)
+                    network.connect()
                 except cruxis.exceptions.ConnectionError:
                     pass
                 else:
@@ -149,14 +141,14 @@ class CruxisDaemon(dbus.service.Object):
     def connect_network(self, network_type, network_args):
 
         network = cruxis.connector.Connector.create_network(network_type,
-                                                        *network_args)
+                                                            *network_args)
 
-        self.__connect_to(network)
+        network.connect()
 
     @cruxis_method(in_signature='i', out_signature='')
     def connect_by_id(self, network_id):
         network = cruxis.stored_network.StoredNetwork.get_by_id(network_id)
-        self.__connect_to(network)
+        network.connect()
 
     @cruxis_method(in_signature='', out_signature='')
     def disconnect(self):

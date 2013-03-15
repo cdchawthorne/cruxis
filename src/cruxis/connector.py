@@ -25,14 +25,14 @@ class Connector(metaclass=abc.ABCMeta):
         cls.__network_types[name] = network_type
 
     @classmethod
-    def scan(cls, currently_connected):
-        if not currently_connected:
+    def scan(cls):
+        if cls.__connected_network is None:
             subprocess.check_call(["ip", "link", "set", cls.INTERFACE, "up"])
 
         scan_output = subprocess.check_output(
                 ["iwlist", cls.INTERFACE, "scan"])
 
-        if not currently_connected:
+        if cls.__connected_network is None:
             subprocess.check_call(
                     ["ip", "link", "set", cls.INTERFACE, "down"])
 
@@ -55,12 +55,13 @@ class Connector(metaclass=abc.ABCMeta):
 
     @classmethod
     def check_connected(cls):
-        ret = subprocess.call(
-                ["ping", "-c3", "-I", cls.INTERFACE, cls.TEST_URL])
-        return ret == 0
+        #ret = subprocess.call(
+                #["ping", "-c3", "-I", cls.INTERFACE, cls.TEST_URL])
+        #return ret == 0
+        return cls.__connected_network is not None
 
     def connect(self):
-        self.disconnect()
+        Connector.disconnect()
         try:
             self._specific_connect()
         except cruxis.exceptions.ConnectionError:
@@ -70,10 +71,15 @@ class Connector(metaclass=abc.ABCMeta):
 
     @classmethod
     def scan_ssids(cls):
-        subprocess.check_call(["ip", "link", "set", cls.INTERFACE, "up"])
+        if cls.__connected_network is None:
+            subprocess.check_call(["ip", "link", "set", cls.INTERFACE, "up"])
+
         scan_output = subprocess.check_output(
                 ["iwlist", cls.INTERFACE, "scan"])
-        subprocess.check_call(["ip", "link", "set", cls.INTERFACE, "down"])
+
+        if cls.__connected_network is None:
+            subprocess.check_call(["ip", "link", "set", cls.INTERFACE, "down"])
+
         ssids = []
         for line in scan_output.splitlines():
             ssid_match = re.search(rb'^\s*ESSID:"(.*)"$', line)

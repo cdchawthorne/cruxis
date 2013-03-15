@@ -101,6 +101,10 @@ class CruxisClient:
         return commands_dict[command]
 
     def run_command(self, args):
+        if not args:
+            self.print_usage()
+            sys.exit(1)
+
         try:
             command = self.__get_command(args[0])
         except KeyError:

@@ -59,7 +59,9 @@ class _WpaConfFile:
                 proc = subprocess.Popen(['wpa_passphrase', self.__ssid],
                                         stdin=subprocess.PIPE, stdout=fdst)
                 proc.communicate(self.__key.encode())
-                proc.wait()
+                ret = proc.wait()
+                if ret:
+                    raise cruxis.exceptions.NetworkStorageError()
 
         os.chmod(dst, stat.S_IRUSR | stat.S_IWUSR)
 

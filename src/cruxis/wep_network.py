@@ -1,4 +1,5 @@
 import os
+import stat
 import subprocess
 
 import cruxis.network

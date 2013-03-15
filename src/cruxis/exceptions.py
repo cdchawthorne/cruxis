@@ -70,27 +70,30 @@ def cruxis_exception(name, key, message_template):
     return DerivedException
 
 
-ConnectionError = cruxis_exception('ConnectionError',
-                                   'connection_error', 
-                                   'Error connecting to ssid {}')
 AutoConnectError = cruxis_exception('AutoConnectError',
                                     'auto_connect_error',
                                     'AutoConnect failed')
+BadKeyError = cruxis_exception('BadKeyError', 'bad_key_error', 
+                               'Invalid WEP key for ssid {}')
+BadWpaConfFileError = cruxis_exception(
+        'BadWpaConfFileError',
+        'bad_wpa_conf_file_error',
+        'Bad WPA conf file: {}')
+ConnectionError = cruxis_exception('ConnectionError',
+                                   'connection_error', 
+                                   'Error connecting to ssid {}')
+CorruptNetworksFileError = cruxis_exception(
+        'CorruptNetworksFileError',
+        'corrupt_networks_file_error',
+        'The networks file {} has been corrupted: id {} does not exist')
 NetworkNotFoundError = cruxis_exception('NetworkNotFoundError',
                                         'network_not_found_error',
                                         'Network not found: {}')
+NetworkStorageError = cruxis_exception(
+        'NetworkStorageError', 'network_storage_error',
+        'Error storing network; probably bad network parameters')
 UnknownNetworkTypeError = cruxis_exception('UnknownNetworkTypeError',
                                            'unknown_network_type_error',
                                            'Unknown network type: {}')
 UsageError = cruxis_exception('UsageError', 'usage_error',
                               'Error processing command line arguments')
-CorruptNetworksFileError = cruxis_exception(
-        'CorruptNetworksFileError',
-        'corrupt_networks_file_error',
-        'The networks file {} has been corrupted: id {} does not exist')
-BadWpaConfFileError = cruxis_exception(
-        'BadWpaConfFileError',
-        'bad_wpa_conf_file_error',
-        'Bad WPA conf file: {}')
-BadKeyError = cruxis_exception('BadKeyError', 'bad_key_error', 
-                               'Invalid WEP key for ssid {}')

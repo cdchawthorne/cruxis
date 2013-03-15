@@ -1,5 +1,6 @@
 import abc
 import os
+import shutil
 
 import cruxis.exceptions
 
@@ -73,15 +74,23 @@ class StoredNetwork(metaclass=abc.ABCMeta):
     def store(self):
         '''Store network information to a new network ID in the filesystem'''
         network_id = self.__next_unused_id()
-        path = os.path.join(cls.NETWORKS_DIR, str(network_id))
+        path = os.path.join(self.NETWORKS_DIR, str(network_id))
         assert not os.path.exists(path)
         os.mkdir(path)
 
-        self._write_to_path(path)
+        try:
+            self._write_to_path(path)
+        except cruxis.exceptions.NetworkStorageError:
+            shutil.rmtree(path)
+            raise
 
     @abc.abstractmethod
     def _write_to_path(self, path):
-        '''Store network information to the pre-existing directory path'''
+        '''
+        Store network information to the pre-existing directory path
+        If this method raises cruxis.exceptions.NetworkStorageError, the store
+        will be aborted, and any half-done storage will be removed.
+        '''
 
     @classmethod
     @abc.abstractmethod
