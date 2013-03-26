@@ -8,4 +8,7 @@ python-gobject2
 bash
 
 To run the daemon on startup, run the following as root:
-systemctl enable cruxis-daemon.service
+systemctl enable cruxis-daemon
+
+To run cruxis auto_connect on startup, run the following as root:
+systemctl enable cruxis-ac

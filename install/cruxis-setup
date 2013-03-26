@@ -12,6 +12,8 @@ cruxis_conf_dir=/etc/cruxis
 systemd_conf_dir=/etc/systemd/system
 dbus_conf_dir=/etc/dbus-1/system.d
 
+systemctl stop cruxis-daemon
+
 if [[ ! -d ${cruxis_dir} ]]; then
     mkdir "${cruxis_dir}"
 fi
@@ -35,6 +37,5 @@ cp "${cruxis_install_dir}/cruxis" /usr/bin/
 cp "${cruxis_install_dir}/org.zelos.cruxis.conf" "${dbus_conf_dir}/"
 cp "${cruxis_install_dir}/cruxis-daemon.service" "${systemd_conf_dir}/"
 
-# TODO: should this be conditional?
 systemctl --system daemon-reload
-systemctl reload cruxis-daemon.service
+systemctl start cruxis-daemon

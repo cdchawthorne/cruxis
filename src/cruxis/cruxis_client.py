@@ -41,10 +41,45 @@ class _DaemonProxy:
             else:
                 raise cruxis.exceptions.CruxisException.create_from_key(
                         error_key, fields)
-        
+
         return wrapped
 
 
+class _ClientMethod:
+    __methods_dict = {}
+
+    @classmethod
+    def _register_method(cls, names, method):
+        for name in names:
+            cls.__methods_dict[name] = method
+
+    @classmethod
+    def get_method_by_name(cls, name):
+        return cls.__methods_dict[name]
+
+    def __init__(self, fn, message):
+        self.__fn = fn
+        self.__message = message
+
+    def __call__(self, *args, **kwargs):
+        return self.__fn(CruxisClient, *args, **kwargs)
+
+    @property
+    def message(self):
+        return self.__message
+
+
+def client_method(names, message):
+    def generator(fn):
+        method = _ClientMethod(fn, message)
+        _ClientMethod._register_method(names, method)
+        return method
+
+    return generator
+
+
+# TODO: give more useful error messages
+#       Go through the client code with an eye towards the user-supplied data
 class CruxisClient:
     NETWORK_TYPE_WPA = 'wpa'
     NETWORK_TYPE_WEP = 'wep'
@@ -54,9 +89,11 @@ class CruxisClient:
     CLI_ARG_WEP = 'wep'
     CLI_ARG_UNSECURED = 'unsecured'
 
-    __network_types = {CLI_ARG_WPA:NETWORK_TYPE_WPA,
-                       CLI_ARG_WEP:NETWORK_TYPE_WEP,
-                       CLI_ARG_UNSECURED:NETWORK_TYPE_UNSECURED}
+    __network_types = {CLI_ARG_WPA: NETWORK_TYPE_WPA,
+                       CLI_ARG_WEP: NETWORK_TYPE_WEP,
+                       CLI_ARG_UNSECURED: NETWORK_TYPE_UNSECURED}
+
+    __daemon = _DaemonProxy()
 
     USAGE_MESSAGE = '''usage:
             cruxis auto_connect
@@ -72,154 +109,167 @@ class CruxisClient:
             cruxis list
             cruxis list_remembered
             cruxis status
-            cruxis help'''
-           
-    def __init__(self):
-        self.__daemon = _DaemonProxy()
+            cruxis help
+            cruxis help COMMAND'''
 
-    def __get_command(self, command):
-        commands_dict = {
-                'auto_connect': self.auto_connect,
-                'ac': self.auto_connect,
-                'connect': self.connect,
-                'connect_by_id': self.connect_by_id,
-                'ci': self.connect_by_id,
-                'add': self.add,
-                'scan': self.scan,
-                'remove': self.remove,
-                'remember': self.remember,
-                'forget': self.forget,
-                'list': self.list_networks,
-                'list_remembered': self.list_remembered_networks,
-                'disconnect': self.disconnect,
-                'status': self.status,
-                'help': self.print_usage,
-                '-h': self.print_usage,
-                '--help': self.print_usage,
-                }
-
-        return commands_dict[command]
-
-    def run_command(self, args):
+    @classmethod
+    def run_command(cls, args):
         if not args:
-            self.print_usage()
+            cls.print_usage()
             sys.exit(1)
 
         try:
-            command = self.__get_command(args[0])
+            command = _ClientMethod.get_method_by_name(args[0])
         except KeyError:
             # Bad command
-            self.print_usage()
+            cls.print_usage()
             sys.exit(1)
 
         try:
             command(*args[1:])
-        except TypeError:
-            # Wrong number of arguments
-            self.print_usage()
-            sys.exit(1)
         except cruxis.exceptions.UsageError:
-            self.print_usage()
+            cls.print_usage()
             sys.exit(1)
 
-    def auto_connect(self):
-        self.__daemon.auto_connect(timeout=152)
+    @client_method(['ac', 'auto_connect'],
+                   'Attempt to connect to remembered networks')
+    def auto_connect(cls):
+        cls.__daemon.auto_connect(timeout=152)
 
-    def list_networks(self):
-        for network_id, ssid in self.__daemon.list_networks():
+    @client_method(['list'], 'List known networks')
+    def list_networks(cls):
+        for network_id, ssid in cls.__daemon.list_networks():
             print('{}: {}'.format(network_id, ssid))
 
-    def list_remembered_networks(self):
-        for network_id, ssid in self.__daemon.list_remembered_networks():
+    @client_method(['list_remembered'], 'List remembered networks')
+    def list_remembered_networks(cls):
+        for network_id, ssid in cls.__daemon.list_remembered_networks():
             print('{}: {}'.format(network_id, ssid))
 
-    def remember(self, network_id_str):
+    @client_method(['remember'], 'Remember network')
+    def remember(cls, network_id_str):
         try:
             network_id = int(network_id_str)
         except ValueError:
             raise cruxis.exceptions.UsageError()
 
-        self.__daemon.remember_network(network_id)
+        cls.__daemon.remember_network(network_id)
 
-    def forget(self, network_id_str):
+    @client_method(['forget'], 'Forget network')
+    def forget(cls, network_id_str):
         try:
             network_id = int(network_id_str)
         except ValueError:
             raise cruxis.exceptions.UsageError()
 
-        self.__daemon.forget_network(network_id)
+        cls.__daemon.forget_network(network_id)
 
-    def connect_by_id(self, network_id_str):
+    @client_method(['connect_by_id'], 'Connect to known network with given ID')
+    def connect_by_id(cls, network_id_str):
         try:
             network_id = int(network_id_str)
         except ValueError:
             raise cruxis.exceptions.UsageError()
 
-        self.__daemon.connect_by_id(network_id, timeout=32)
+        cls.__daemon.connect_by_id(network_id, timeout=32)
 
-    def connect(self, *args, **kwargs):
+    @client_method(['connect'], 'Connect to network with given parameters')
+    def connect(cls, *args, **kwargs):
         if len(args) + len(kwargs) == 1:
-            self.connect_from_file(*args, **kwargs)
+            cls.connect_from_file(*args, **kwargs)
+        elif len(args) + len(kwargs) == 2:
+            cls.connect_from_data(*args, **kwargs)
         else:
-            self.connect_from_data(*args, **kwargs)
+            raise cruxis.exceptions.UsageError()
 
-    def connect_from_file(self, filename):
-        self.__daemon.connect_network(self.NETWORK_TYPE_WPA, [filename],
-                                      timeout=32)
+    @classmethod
+    def connect_from_file(cls, filename):
+        cls.__daemon.connect_network(cls.NETWORK_TYPE_WPA, [filename],
+                                     timeout=32)
 
-    def connect_from_data(self, protocol, ssid):
+    @classmethod
+    def connect_from_data(cls, protocol, ssid):
         connect_args = [ssid]
 
-        if protocol in [self.CLI_ARG_WPA, self.CLI_ARG_WEP]:
+        if protocol in [cls.CLI_ARG_WPA, cls.CLI_ARG_WEP]:
             key = getpass.getpass('Enter network key: ')
             connect_args.append(key)
 
-        self.__daemon.connect_network(self.__network_types[protocol],
-                                      connect_args, timeout=32)
+        cls.__daemon.connect_network(cls.__network_types[protocol],
+                                     connect_args, timeout=32)
 
-    def add(self, *args, **kwargs):
+    @client_method(['add'],
+                  'Add network with given parameters to '
+                  'the list of known networks')
+    def add(cls, *args, **kwargs):
         if len(args) + len(kwargs) == 1:
-            self.add_from_file(*args, **kwargs)
+            cls.add_from_file(*args, **kwargs)
+        elif len(args) + len(kwargs) == 2:
+            cls.add_from_data(*args, **kwargs)
         else:
-            self.add_from_data(*args, **kwargs)
+            raise cruxis.exceptions.UsageError()
 
-    def add_from_file(self, filename):
-        self.__daemon.add_network(self.NETWORK_TYPE_WPA, [filename])
+    @classmethod
+    def add_from_file(cls, filename):
+        cls.__daemon.add_network(cls.NETWORK_TYPE_WPA, [filename])
 
-    def add_from_data(self, protocol, ssid):
+    @classmethod
+    def add_from_data(cls, protocol, ssid):
         add_args = [ssid]
 
-        if protocol in [self.CLI_ARG_WPA, self.CLI_ARG_WEP]:
+        if protocol in [cls.CLI_ARG_WPA, cls.CLI_ARG_WEP]:
             key = getpass.getpass('Enter network key: ')
             add_args.append(key)
 
-        self.__daemon.add_network(self.__network_types[protocol],
-                                  add_args)
+        cls.__daemon.add_network(cls.__network_types[protocol],
+                                 add_args)
 
-    def scan(self):
-        print(self.__daemon.scan())
+    @client_method(['scan'], 'Scan interface for networks')
+    def scan(cls):
+        print(cls.__daemon.scan())
 
-    def remove(self, network_id_str):
+    @client_method(['remove'],
+                  'Remove network with given ID from the list '
+                  'of remembered networks')
+    def remove(cls, network_id_str):
         try:
             network_id = int(network_id_str)
         except ValueError:
             raise cruxis.exceptions.UsageError()
 
-        self.__daemon.remove_network(network_id)
+        cls.__daemon.remove_network(network_id)
 
-    def disconnect(self):
-        self.__daemon.disconnect()
+    @client_method(['disconnect'],
+                  'Disconnect from currently connected network')
+    def disconnect(cls):
+        cls.__daemon.disconnect()
 
-    def status(self):
-        connected = self.__daemon.connected()
+    @client_method(['status'], 'Check if currently connected to a network')
+    def status(cls):
+        connected = cls.__daemon.connected()
         if connected:
             print('Connected')
         else:
             print('Disconnected')
 
-    def print_usage(self):
-        print(self.USAGE_MESSAGE, file=sys.stderr)
+    @client_method(['help'], 'Get help on a given command')
+    def help(cls, *args, **kwargs):
+        if len(args) + len(kwargs) == 1:
+            try:
+                method = _ClientMethod.get_method_by_name(*args, **kwargs)
+            except KeyError:
+                raise cruxis.exceptions.UsageError()
+
+            print(method.message)
+        elif len(args) + len(kwargs) == 0:
+            cls.print_usage()
+        else:
+            raise cruxis.exceptions.UsageError()
+
+    @classmethod
+    def print_usage(cls):
+        print(CruxisClient.USAGE_MESSAGE, file=sys.stderr)
 
 
 if __name__ == "__main__":
-    CruxisClient().run_command(sys.argv[1:])
+    CruxisClient.run_command(sys.argv[1:])

@@ -6,7 +6,6 @@ import subprocess
 
 import cruxis.exceptions
 
-# TODO: should this track the currently connected network?
 class Connector(metaclass=abc.ABCMeta):
     CRUXIS_DIR = '/etc/cruxis'
     TEST_URL = 'xkcd.com'
