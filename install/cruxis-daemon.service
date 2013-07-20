@@ -4,7 +4,7 @@ Description=Cruxis Daemon
 [Service]
 Type=dbus
 BusName=org.zelos.cruxis.daemon
-ExecStart=/usr/sbin/cruxis-daemon
+ExecStart=/usr/bin/cruxis-daemon
 ExecStop=/bin/kill $MAINPID ; rm /run/cruxis-daemon.pid
 ExecReload=/bin/kill -HUP $MAINPID
 

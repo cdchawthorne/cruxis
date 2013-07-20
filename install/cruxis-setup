@@ -11,6 +11,7 @@ cruxis_src_dir="${cruxis_install_dir}"/../src
 cruxis_conf_dir=/etc/cruxis
 systemd_conf_dir=/etc/systemd/system
 dbus_conf_dir=/etc/dbus-1/system.d
+bin_dir=/usr/bin
 
 systemctl stop cruxis-daemon
 
@@ -31,8 +32,8 @@ if [[ ! -f ${cruxis_conf_dir}/networks ]]; then
 fi
 
 cp -r "${cruxis_src_dir}" "${cruxis_dir}"
-cp "${cruxis_install_dir}/cruxis-daemon" /usr/sbin/
-cp "${cruxis_install_dir}/cruxis" /usr/bin/
+cp "${cruxis_install_dir}/cruxis-daemon" "${bin_dir}"
+cp "${cruxis_install_dir}/cruxis" "${bin_dir}"
 
 cp "${cruxis_install_dir}/org.zelos.cruxis.conf" "${dbus_conf_dir}/"
 cp "${cruxis_install_dir}/cruxis-daemon.service" "${systemd_conf_dir}/"

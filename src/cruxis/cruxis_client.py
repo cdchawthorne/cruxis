@@ -57,21 +57,24 @@ class _ClientMethod:
     def get_method_by_name(cls, name):
         return cls.__methods_dict[name]
 
-    def __init__(self, fn, message):
+    def __init__(self, fn, message, options=[]):
         self.__fn = fn
         self.__message = message
+        self.__options = options
 
     def __call__(self, *args, **kwargs):
         return self.__fn(CruxisClient, *args, **kwargs)
 
     @property
-    def message(self):
-        return self.__message
+    def help(self):
+        option_lines = ['{}    {}'.format(option, option_help)
+                        for option, option_help in self.__options]
+        return '\n'.join([self.__message] + option_lines)
 
 
-def client_method(names, message):
+def client_method(names, message, options=[]):
     def generator(fn):
-        method = _ClientMethod(fn, message)
+        method = _ClientMethod(fn, message, options)
         _ClientMethod._register_method(names, method)
         return method
 
@@ -100,7 +103,7 @@ class CruxisClient:
             cruxis connect (wpa|wep|unsecured) SSID
             cruxis connect WPA_CONF_FILE
             cruxis connect_by_id NETWORK_ID_NUM
-            cruxis add (wpa|wep|unsecured) SSID
+            cruxis add [-r] (wpa|wep|unsecured) SSID
             cruxis add WPA_CONF_FILE
             cruxis scan
             cruxis remove NETWORK_ID_NUM
@@ -200,7 +203,8 @@ class CruxisClient:
 
     @client_method(['add'],
                   'Add network with given parameters to '
-                  'the list of known networks')
+                  'the list of known networks',
+                  options=[('-r', 'Remember this network')])
     def add(cls, *args, **kwargs):
         if len(args) + len(kwargs) == 1:
             cls.add_from_file(*args, **kwargs)
@@ -240,15 +244,15 @@ class CruxisClient:
         cls.__daemon.remove_network(network_id)
 
     @client_method(['disconnect'],
-                  'Disconnect from currently connected network')
+                   'Disconnect from currently connected network')
     def disconnect(cls):
         cls.__daemon.disconnect()
 
     @client_method(['status'], 'Check if currently connected to a network')
     def status(cls):
-        connected = cls.__daemon.connected()
+        connected, ssid = cls.__daemon.connected_network()
         if connected:
-            print('Connected')
+            print('Connected to {}'.format(ssid))
         else:
             print('Disconnected')
 
@@ -260,7 +264,7 @@ class CruxisClient:
             except KeyError:
                 raise cruxis.exceptions.UsageError()
 
-            print(method.message)
+            print(method.help)
         elif len(args) + len(kwargs) == 0:
             cls.print_usage()
         else:

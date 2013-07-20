@@ -9,7 +9,7 @@ cruxis_dir=/usr/lib/cruxis
 cruxis_conf_dir=/etc/cruxis
 systemd_conf_dir=/etc/systemd/system
 dbus_conf_dir=/etc/dbus-1/system.d
-daemon_exec=/usr/sbin/cruxis-daemon
+daemon_exec=/usr/bin/cruxis-daemon
 client_exec=/usr/bin/cruxis
 
 echo "WARNING: there's a lot of rm -rf going on in here." 1>&2

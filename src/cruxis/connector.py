@@ -53,11 +53,10 @@ class Connector(metaclass=abc.ABCMeta):
             cls.__connected_network = None
 
     @classmethod
-    def check_connected(cls):
-        #ret = subprocess.call(
-                #["ping", "-c3", "-I", cls.INTERFACE, cls.TEST_URL])
-        #return ret == 0
-        return cls.__connected_network is not None
+    def connected_ssid(cls):
+        return (cls.__connected_network.ssid
+                if cls.__connected_network is not None
+                else None)
 
     def connect(self):
         Connector.disconnect()

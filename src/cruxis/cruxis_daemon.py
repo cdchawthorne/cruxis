@@ -105,8 +105,6 @@ class CruxisDaemon(dbus.service.Object):
         with open(self.PID_FILE, 'w') as f:
             f.write(str(os.getpid()) + "\n")
 
-        self.__connected = False
-
     ######################
     # Connection Methods #
     ######################
@@ -152,16 +150,19 @@ class CruxisDaemon(dbus.service.Object):
 
     @cruxis_method(in_signature='', out_signature='')
     def disconnect(self):
-        self.__connected = False
         cruxis.connector.Connector.disconnect()
 
-    @cruxis_method(in_signature='', out_signature='b')
-    def connected(self):
-        return cruxis.connector.Connector.check_connected()
+    @cruxis_method(in_signature='', out_signature='(bs)')
+    def connected_network(self):
+        connected_ssid = cruxis.connector.Connector.connected_ssid()
+        if connected_ssid is not None:
+            return (True, connected_ssid)
+        else:
+            return (False, '')
 
     @cruxis_method(in_signature='', out_signature='s')
     def scan(self):
-        return cruxis.connector.Connector.scan(self.__connected)
+        return cruxis.connector.Connector.scan()
 
     def run_maintenance(self):
         return True
