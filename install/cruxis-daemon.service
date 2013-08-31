@@ -5,8 +5,7 @@ Description=Cruxis Daemon
 Type=dbus
 BusName=org.zelos.cruxis.daemon
 ExecStart=/usr/bin/cruxis-daemon
-ExecStop=/bin/kill $MAINPID ; rm /run/cruxis-daemon.pid
-ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill $MAINPID ; /bin/rm /run/cruxis-daemon.pid
 
 [Install]
 WantedBy=multi-user.target

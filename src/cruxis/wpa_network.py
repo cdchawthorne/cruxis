@@ -115,7 +115,8 @@ class WpaNetwork(cruxis.network.Network):
                                        "-c", conf_filename])
 
         try:
-            subprocess.check_call(["dhcpcd", self.INTERFACE])
+            subprocess.check_call(["dhcpcd", self.INTERFACE,
+                                   "-C", "wpa_supplicant"])
         except subprocess.CalledProcessError as e:
             supplicant.terminate()
             supplicant.wait()
