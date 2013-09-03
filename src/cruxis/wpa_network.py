@@ -105,9 +105,9 @@ class WpaNetwork(cruxis.network.Network):
         return cls(conf_file)
 
     def _specific_connect(self):
-        subprocess.check_call(["ip", "link", "set", self.INTERFACE, "up"])
+        self._interface_up()
         subprocess.check_call(
-                ["iwconfig", self.INTERFACE, "essid", self.__ssid])
+                ["iw", "dev", self.INTERFACE, "connect", self.__ssid])
 
         conf_filename = self.__conf_file.get_filename(self.DEFAULT_CONF_FILE)
         supplicant = subprocess.Popen(["wpa_supplicant", "-Dwext",
@@ -120,7 +120,7 @@ class WpaNetwork(cruxis.network.Network):
         except subprocess.CalledProcessError as e:
             supplicant.terminate()
             supplicant.wait()
-            subprocess.call(["ip", "link", "set", self.INTERFACE, "down"])
+            self._interface_down()
             raise cruxis.exceptions.ConnectionError(self.__ssid) from e
 
         self.__supplicant = supplicant
@@ -131,7 +131,7 @@ class WpaNetwork(cruxis.network.Network):
         self.__supplicant.terminate()
         self.__supplicant.wait()
         self.__supplicant = None
-        subprocess.check_call(["ip", "link", "set", self.INTERFACE, "down"])
+        self._interface_down()
 
         if self.__remove_default_conf:
             os.remove(self.DEFAULT_CONF_FILE)

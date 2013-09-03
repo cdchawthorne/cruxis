@@ -26,31 +26,24 @@ class WepNetwork(cruxis.network.Network):
     def ssid(self):
         return self.__ssid
 
-    def __formatted_key(self):
-        try:
-            int(self.__key, 16)
-        except ValueError:
-            return 's:' + self.__key
-        else:
-            return self.__key
-
     def _specific_connect(self):
-        subprocess.check_call(["ip", "link", "set", self.INTERFACE, "up"])
+        self._interface_up()
         try:
-            subprocess.check_call(["iwconfig", self.INTERFACE, "essid", self.__ssid,
-                                   "key", self.__formatted_key()])
+            subprocess.check_call(["iw", "dev", self.INTERFACE, "connect",
+                                   self.__ssid, "key", "0:%s" % self.__key])
         except subprocess.CalledProcessError as e:
             raise cruxis.exceptions.BadKeyError(self.__ssid)
 
         try:
-            subprocess.check_call(["dhcpcd", self.INTERFACE])
+            subprocess.check_call(["dhcpcd", self.INTERFACE,
+                                   "-C", "wpa_supplicant"])
         except subprocess.CalledProcessError as e:
-            subprocess.call(["ip", "link", "set", self.INTERFACE, "down"])
+            self._interface_down()
             raise cruxis.exceptions.ConnectionError(self.__ssid) from e
 
     def _specific_disconnect(self):
         subprocess.check_call(["dhcpcd", "-x", self.INTERFACE])
-        subprocess.check_call(["ip", "link", "set", self.INTERFACE, "down"])
+        self._interface_down()
 
     def _write_to_path(self, path):
         with open(os.path.join(path, "ssid"), "w") as f:

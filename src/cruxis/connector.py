@@ -26,14 +26,13 @@ class Connector(metaclass=abc.ABCMeta):
     @classmethod
     def scan(cls):
         if cls.__connected_network is None:
-            subprocess.check_call(["ip", "link", "set", cls.INTERFACE, "up"])
+            cls._interface_up()
 
         scan_output = subprocess.check_output(
-                ["iwlist", cls.INTERFACE, "scan"])
+                ["iw", "dev", cls.INTERFACE, "scan"])
 
         if cls.__connected_network is None:
-            subprocess.check_call(
-                    ["ip", "link", "set", cls.INTERFACE, "down"])
+            cls._interface_down()
 
         return scan_output
 
@@ -70,21 +69,31 @@ class Connector(metaclass=abc.ABCMeta):
     @classmethod
     def scan_ssids(cls):
         if cls.__connected_network is None:
-            subprocess.check_call(["ip", "link", "set", cls.INTERFACE, "up"])
+            cls._interface_up()
 
         scan_output = subprocess.check_output(
-                ["iwlist", cls.INTERFACE, "scan"])
+                ["iw", "dev", cls.INTERFACE, "scan"])
 
         if cls.__connected_network is None:
-            subprocess.check_call(["ip", "link", "set", cls.INTERFACE, "down"])
+            cls._interface_down()
 
         ssids = []
         for line in scan_output.splitlines():
-            ssid_match = re.search(rb'^\s*ESSID:"(.*)"$', line)
+            ssid_match = re.search(rb'^\s*SSID: (.*)$', line)
             if ssid_match:
                 ssids.append(ssid_match.expand(rb'\1').decode())
 
         return ssids
+
+    @classmethod
+    def _interface_up(cls):
+        subprocess.check_call(
+                ["ip", "link", "set", "dev", cls.INTERFACE, "up"])
+
+    @classmethod
+    def _interface_down(cls):
+        subprocess.check_call(
+                ["ip", "link", "set", "dev", cls.INTERFACE, "down"])
 
     @abc.abstractproperty
     def ssid(self):
